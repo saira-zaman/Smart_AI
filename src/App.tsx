@@ -75,6 +75,7 @@ export default function SmartHireApp() {
   const [strategy, setStrategy] = useState<any>(null);
   const [isApplying, setIsApplying] = useState(false);
   const [hasApplied, setHasApplied] = useState(false);
+  const [error, setError] = useState<string>('');
 
   // Interview state
   const [interviewPersona, setInterviewPersona] = useState<string>('Startup Founder');
@@ -85,11 +86,14 @@ export default function SmartHireApp() {
   const startAnalysis = async () => {
     if (!resumeText || !jobDesc) return;
     setIsLoading(true);
+    setError('');
     try {
       const result = await analyzeResume(resumeText, jobDesc, interests.split(','));
       setAnalysis(result);
       setStep('analysis');
-    } catch (error) {
+    } catch (error: any) {
+      const errorMsg = error?.message || 'Failed to analyze resume. Make sure GEMINI_API_KEY is set.';
+      setError(errorMsg);
       console.error(error);
     } finally {
       setIsLoading(false);
@@ -98,10 +102,13 @@ export default function SmartHireApp() {
 
   const handleFixResume = async () => {
     setIsLoading(true);
+    setError('');
     try {
       const result = await fixAndApply(resumeText, jobDesc, analysis);
       setImprovement(result);
-    } catch (error) {
+    } catch (error: any) {
+      const errorMsg = error?.message || 'Failed to improve resume. Make sure GEMINI_API_KEY is set.';
+      setError(errorMsg);
       console.error(error);
     } finally {
       setIsLoading(false);
@@ -112,13 +119,16 @@ export default function SmartHireApp() {
     const selectedPersona = persona || interviewPersona;
     setInterviewPersona(selectedPersona);
     setIsLoading(true);
+    setError('');
     try {
       const question = await getInterviewQuestion(selectedPersona, jobDesc, resumeText);
       setCurrentQuestion(question);
       setStep('interview');
       setEvaluation(null);
       setUserAnswer('');
-    } catch (error) {
+    } catch (error: any) {
+      const errorMsg = error?.message || 'Failed to generate interview question. Make sure GEMINI_API_KEY is set.';
+      setError(errorMsg);
       console.error(error);
     } finally {
       setIsLoading(false);
@@ -128,10 +138,13 @@ export default function SmartHireApp() {
   const submitAnswer = async () => {
     if (!userAnswer || !currentQuestion) return;
     setIsLoading(true);
+    setError('');
     try {
       const result = await evaluateAnswer(currentQuestion.question, userAnswer, interviewPersona);
       setEvaluation(result);
-    } catch (error) {
+    } catch (error: any) {
+      const errorMsg = error?.message || 'Failed to evaluate answer. Make sure GEMINI_API_KEY is set.';
+      setError(errorMsg);
       console.error(error);
     } finally {
       setIsLoading(false);
@@ -140,11 +153,14 @@ export default function SmartHireApp() {
 
   const generateStrategy = async () => {
     setIsLoading(true);
+    setError('');
     try {
       const result = await getCareerStrategy(resumeText, jobDesc);
       setStrategy(result);
       setStep('strategy');
-    } catch (error) {
+    } catch (error: any) {
+      const errorMsg = error?.message || 'Failed to generate strategy. Make sure GEMINI_API_KEY is set.';
+      setError(errorMsg);
       console.error(error);
     } finally {
       setIsLoading(false);
@@ -240,6 +256,24 @@ export default function SmartHireApp() {
 
       {/* Main Content Area */}
       <main className="flex-1 overflow-y-auto relative h-full">
+        {/* Error Banner */}
+        {error && (
+          <div className="fixed top-0 left-0 right-0 z-50 bg-red-50 border-b-2 border-red-400 p-4">
+            <div className="flex items-start gap-4 max-w-7xl mx-auto">
+              <AlertCircle className="w-6 h-6 text-red-500 shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <h3 className="font-bold text-red-900">Error</h3>
+                <p className="text-red-800 text-sm mt-1">{error}</p>
+              </div>
+              <button 
+                onClick={() => setError('')}
+                className="text-red-500 hover:text-red-700 font-bold"
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+        )}
         {/* Top Mini Nav */}
         {!isLoggedIn && (
            <div className="absolute top-6 right-8 z-30">
@@ -251,7 +285,7 @@ export default function SmartHireApp() {
               </button>
            </div>
         )}
-        <div className="p-8 max-w-7xl mx-auto space-y-8">
+        <div className="p-8 max-w-7xl mx-auto space-y-8" style={{ marginTop: error ? '80px' : '0' }}>
           <AnimatePresence mode="wait">
             {step === 'upload' && (
               <motion.div 
