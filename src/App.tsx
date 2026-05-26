@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { 
   RadarChart, 
   PolarGrid, 
@@ -29,20 +29,30 @@ import {
   Settings,
   LogOut,
   Sparkles,
-  Loader2
+  Loader2,
+  Menu,
+  X
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import ReactMarkdown from 'react-markdown';
 import { analyzeResume, fixAndApply, getCareerStrategy, getInterviewQuestion, evaluateAnswer } from './services/geminiService';
 import { cn } from './lib/utils';
 
+type SettingsKey = 'ghostingProtection' | 'privacyMode' | 'autoOutreach';
+
+const settingsOptions: Array<{ key: SettingsKey; title: string; desc: string }> = [
+  { key: 'ghostingProtection', title: 'Recruiter Ghosting Protection', desc: 'Automatically follow up if no response within 72h.' },
+  { key: 'privacyMode', title: 'Deep Profile Privacy', desc: 'Anonymize work history identifiers for initial scrapers.' },
+  { key: 'autoOutreach', title: 'Direct Recruiter Messages', desc: 'Allow AI to ping recruiters on LinkedIn automatically.' }
+];
+
 // --- Components ---
 
 const Card = ({ children, title, className, headerAction }: { children: React.ReactNode, title?: string, className?: string, headerAction?: React.ReactNode }) => (
-  <div className={cn("bg-white border border-slate-200 rounded-2xl p-6 shadow-sm", className)}>
+  <div className={cn("rounded-[28px] border border-white/70 bg-white/85 backdrop-blur-xl p-6 shadow-[0_20px_60px_-28px_rgba(15,23,42,0.35)] ring-1 ring-slate-200/50", className)}>
     {title && (
       <div className="flex items-center justify-between mb-6">
-        <h3 className="text-[12px] font-bold text-slate-500 uppercase tracking-wider">{title}</h3>
+        <h3 className="text-[11px] font-extrabold text-slate-500 uppercase tracking-[0.24em]">{title}</h3>
         {headerAction}
       </div>
     )}
@@ -50,12 +60,18 @@ const Card = ({ children, title, className, headerAction }: { children: React.Re
   </div>
 );
 
+  const buttonBase = "inline-flex items-center justify-center gap-2 rounded-full font-semibold transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-brand/25 focus:ring-offset-2 focus:ring-offset-white active:scale-[0.99]";
+  const buttonPrimary = `${buttonBase} bg-brand text-white shadow-[0_18px_40px_-18px_rgba(79,70,229,0.6)] hover:-translate-y-0.5 hover:bg-indigo-600`;
+  const buttonSecondary = `${buttonBase} border border-slate-200 bg-white text-slate-700 shadow-sm hover:-translate-y-0.5 hover:border-slate-300 hover:text-slate-900 hover:bg-slate-50`;
+  const buttonPill = `${buttonBase} border border-white/10 bg-white/5 text-slate-200 hover:bg-white/10 hover:text-white`;
+  const buttonDanger = `${buttonBase} bg-linear-to-r from-red-500 to-rose-400 text-white shadow-[0_18px_40px_-22px_rgba(244,63,94,0.55)] hover:-translate-y-0.5 hover:from-red-600 hover:to-rose-500`;
+
 const NavItem = ({ icon: Icon, label, active = false, onClick, loading = false }: { icon: any, label: string, active?: boolean, onClick?: () => void, loading?: boolean }) => (
   <div 
     onClick={!loading ? onClick : undefined}
     className={cn(
-      "flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-200",
-      active ? "bg-slate-700 text-slate-50" : "text-slate-400 hover:text-slate-50 hover:bg-slate-800",
+      "flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-semibold transition-all duration-200 border",
+      active ? "bg-white/10 text-white border-white/10 shadow-lg shadow-black/10" : "text-slate-400 border-transparent hover:text-white hover:bg-white/5 hover:border-white/10",
       loading ? "opacity-50 cursor-wait" : "cursor-pointer"
     )}
   >
@@ -66,10 +82,12 @@ const NavItem = ({ icon: Icon, label, active = false, onClick, loading = false }
 
 export default function SmartHireApp() {
   const [step, setStep] = useState<'upload' | 'analysis' | 'strategy' | 'interview' | 'radar' | 'settings'>('upload');
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [resumeText, setResumeText] = useState('');
   const [jobDesc, setJobDesc] = useState('');
   const [interests, setInterests] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [loadingText, setLoadingText] = useState({ title: '', desc: '' });
   const [analysis, setAnalysis] = useState<any>(null);
   const [improvement, setImprovement] = useState<any>(null);
   const [strategy, setStrategy] = useState<any>(null);
@@ -84,6 +102,7 @@ export default function SmartHireApp() {
 
   const startAnalysis = async () => {
     if (!resumeText || !jobDesc) return;
+    setLoadingText({ title: 'AI Reasoning in Progress', desc: 'Cross-referencing recruiter bias markers and semantic skill patterns...' });
     setIsLoading(true);
     try {
       const result = await analyzeResume(resumeText, jobDesc, interests.split(','));
@@ -97,6 +116,7 @@ export default function SmartHireApp() {
   };
 
   const handleFixResume = async () => {
+    setLoadingText({ title: 'Applying AI Fixes', desc: 'Optimizing your resume using the Google XYZ formula...' });
     setIsLoading(true);
     try {
       const result = await fixAndApply(resumeText, jobDesc, analysis);
@@ -111,6 +131,7 @@ export default function SmartHireApp() {
   const startInterview = async (persona?: string) => {
     const selectedPersona = persona || interviewPersona;
     setInterviewPersona(selectedPersona);
+    setLoadingText({ title: 'Preparing Interview', desc: `Generating high-stakes questions from the ${selectedPersona} persona...` });
     setIsLoading(true);
     try {
       const question = await getInterviewQuestion(selectedPersona, jobDesc, resumeText);
@@ -125,8 +146,57 @@ export default function SmartHireApp() {
     }
   };
 
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setLoadingText({ title: 'Extracting Resume Data', desc: 'Parsing document contents locally (this can take a moment)...' });
+    setIsLoading(true);
+    try {
+      if (file.type === 'application/pdf') {
+        const reader = new FileReader();
+        reader.onload = async () => {
+          const typedarray = new Uint8Array(reader.result as ArrayBuffer);
+          const pdfjsLib = await import('pdfjs-dist');
+          pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
+          const pdf = await pdfjsLib.getDocument(typedarray).promise;
+          let fullText = '';
+          for (let i = 1; i <= pdf.numPages; i++) {
+            const page = await pdf.getPage(i);
+            const textContent = await page.getTextContent();
+            const strings = textContent.items.map((item: any) => item.str);
+            fullText += strings.join(' ') + '\n';
+          }
+          setResumeText(fullText);
+          setIsLoading(false);
+        };
+        reader.readAsArrayBuffer(file);
+      } else if (file.name.endsWith('.docx')) {
+        showToast("DOCX support is limited. Try PDF if it fails.", 'info');
+        const reader = new FileReader();
+        reader.onload = async () => {
+          try {
+            const mammoth = await import('mammoth');
+            const result = await mammoth.extractRawText({ arrayBuffer: reader.result as ArrayBuffer });
+            setResumeText(result.value);
+          } catch (e) { showToast("DOCX Parse Error", 'error'); }
+          finally { setIsLoading(false); }
+        };
+        reader.readAsArrayBuffer(file);
+      } else {
+        showToast("Unsupported file format.", 'error');
+        setIsLoading(false);
+      }
+    } catch (err) {
+      console.error(err);
+      showToast("Error parsing file. Try pasting text.", 'error');
+      setIsLoading(false);
+    }
+  };
+
   const submitAnswer = async () => {
     if (!userAnswer || !currentQuestion) return;
+    setLoadingText({ title: 'Evaluating Answer', desc: 'Analyzing confidence markers and value alignment...' });
     setIsLoading(true);
     try {
       const result = await evaluateAnswer(currentQuestion.question, userAnswer, interviewPersona);
@@ -139,6 +209,7 @@ export default function SmartHireApp() {
   };
 
   const generateStrategy = async () => {
+    setLoadingText({ title: 'Generating Strategy', desc: 'Analyzing gaps and mapping 60-day market opportunities...' });
     setIsLoading(true);
     try {
       const result = await getCareerStrategy(resumeText, jobDesc);
@@ -154,7 +225,7 @@ export default function SmartHireApp() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [userName, setUserName] = useState('');
-  const [loginInput, setLoginInput] = useState({ name: '', email: 'sairazaman101@gmail.com' });
+  const [loginInput, setLoginInput] = useState({ name: '', email: 'yourid@gmail.com' });
 
   // Toast / notification
   const [toast, setToast] = useState<{ message: string; type?: 'info' | 'error' } | null>(null);
@@ -162,6 +233,8 @@ export default function SmartHireApp() {
     setToast({ message, type });
     window.setTimeout(() => setToast(null), 3500);
   };
+
+  const resumeRef = useRef<HTMLTextAreaElement | null>(null);
 
   // Settings State
   const [settings, setSettings] = useState({
@@ -174,6 +247,7 @@ export default function SmartHireApp() {
     e.preventDefault();
     if (!loginInput.name) return;
     
+    setLoadingText({ title: 'Authenticating', desc: 'Securing your connection...' });
     setIsLoading(true);
     // Mimic real auth
     setTimeout(() => {
@@ -188,11 +262,29 @@ export default function SmartHireApp() {
   };
 
   return (
-    <div className="flex h-screen bg-slate-100 overflow-hidden text-slate-800 selection:bg-brand/10">
+    <div className="flex h-screen bg-[radial-gradient(circle_at_top_left,rgba(79,70,229,0.10),transparent_28%),linear-gradient(180deg,#f8fafc_0%,#eef2ff_100%)] overflow-hidden text-slate-800 selection:bg-brand/10 relative">
+      {/* Mobile Overlay */}
+      {isMobileMenuOpen && (
+        <div 
+          className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-40 md:hidden" 
+          onClick={() => setIsMobileMenuOpen(false)}
+        />
+      )}
+
       {/* Sidebar */}
-      <aside className="w-[260px] bg-slate-950 flex flex-col p-6 shrink-0 z-20">
-        <div className="flex items-center gap-2 mb-10 px-2 text-slate-50 cursor-pointer" onClick={() => setStep('upload')}>
-          <div className="w-8 h-8 bg-brand rounded-lg flex items-center justify-center">
+      <aside className={cn(
+        "w-[280px] bg-slate-950/95 backdrop-blur-xl flex flex-col p-6 shrink-0 z-50 fixed inset-y-0 left-0 transform transition-transform duration-300 ease-in-out md:relative md:translate-x-0 md:m-4 md:rounded-[28px] md:shadow-2xl md:shadow-slate-950/25 md:border md:border-white/10",
+        isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"
+      )}>
+        <button 
+          className="md:hidden absolute top-6 right-6 text-slate-400 hover:text-white"
+          onClick={() => setIsMobileMenuOpen(false)}
+        >
+          <X className="w-5 h-5" />
+        </button>
+
+        <div className="flex items-center gap-3 mb-10 px-2 text-slate-50 cursor-pointer" onClick={() => { setStep('upload'); setIsMobileMenuOpen(false); }}>
+          <div className="w-9 h-9 bg-linear-to-br from-brand to-indigo-400 rounded-2xl flex items-center justify-center shadow-lg shadow-brand/20">
             <Zap className="w-5 h-5 fill-current" />
           </div>
           <span className="font-extrabold text-lg tracking-tight uppercase">SmartHire AI<span className="text-brand">++</span></span>
@@ -225,7 +317,7 @@ export default function SmartHireApp() {
           <NavItem icon={Settings} label="Settings" active={step === 'settings'} onClick={() => setStep('settings')} />
         </nav>
 
-        <div className="mt-auto pt-6 border-t border-slate-800">
+        <div className="mt-auto pt-6 border-t border-white/10">
           <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Logged In As</div>
           <div className="flex items-center justify-between">
             {isLoggedIn ? (
@@ -246,19 +338,36 @@ export default function SmartHireApp() {
       </aside>
 
       {/* Main Content Area */}
-      <main className="flex-1 overflow-y-auto relative h-full hide-scrollbar">
-        {/* Top Mini Nav */}
+      <main className="flex-1 flex flex-col overflow-hidden relative h-full">
+        {/* Mobile Header */}
+        <div className="md:hidden flex items-center justify-between p-4 bg-white/80 backdrop-blur-xl border-b border-slate-200 shrink-0 z-30 shadow-sm">
+          <div className="flex items-center gap-2 text-slate-900">
+            <div className="w-8 h-8 bg-brand rounded-lg flex items-center justify-center">
+              <Zap className="w-5 h-5 fill-white" />
+            </div>
+            <span className="font-extrabold text-lg tracking-tight uppercase">SmartHire AI<span className="text-brand">++</span></span>
+          </div>
+          <button 
+            onClick={() => setIsMobileMenuOpen(true)}
+            className="p-2 -mr-2 text-slate-600 hover:bg-slate-100 rounded-2xl transition-colors"
+          >
+            <Menu className="w-6 h-6" />
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto relative h-full hide-scrollbar">
+          {/* Top Mini Nav */}
         {!isLoggedIn && (
            <div className="absolute top-6 right-8 z-30">
               <button 
                 onClick={() => setShowLoginModal(true)}
-                className="px-6 py-2 bg-slate-900 text-white text-xs font-bold rounded-full hover:bg-black transition-all shadow-lg"
+                className={cn(buttonPill, "px-5 py-2.5 bg-slate-900 text-white border-slate-900/10 shadow-lg hover:shadow-xl")}
               >
                 Sign In
               </button>
            </div>
         )}
-        <div className="p-8 max-w-7xl mx-auto space-y-8">
+        <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-8">
           <AnimatePresence>
             {toast && (
               <motion.div
@@ -282,92 +391,56 @@ export default function SmartHireApp() {
                 initial={{ opacity: 0, scale: 0.98 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0 }}
-                className="max-w-3xl mx-auto py-12"
+                className="max-w-4xl mx-auto py-4"
               >
-                <div className="mb-10 text-center">
-                  <h1 className="text-4xl font-extrabold text-slate-900 mb-4 tracking-tight">Recruiter-Grade Resume Intelligence</h1>
-                  <p className="text-slate-500">Stop applying blindly. Calculate your exact rejection probability before you hit submit.</p>
+                <div className="mb-6 text-left pl-1 max-w-2xl">
+                  <div className="inline-flex items-center gap-2 rounded-full border border-brand/10 bg-white/80 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.24em] text-brand shadow-sm mb-4">
+                    <Sparkles className="h-3.5 w-3.5" /> SmartHire AI++
+                  </div>
+                  <h1 className="text-4xl sm:text-5xl font-black text-slate-900 mb-3 tracking-tight leading-[1.02]">Recruiter-Grade Resume Intelligence</h1>
+                  <p className="text-slate-600 text-base sm:text-lg leading-relaxed">Stop applying blindly. Calculate your exact rejection probability before you hit submit.</p>
                 </div>
 
-                <Card className="p-10 border-slate-300 shadow-xl">
+                <Card className="p-5 sm:p-8 border-slate-300/60">
                   <div className="space-y-6">
                     <div>
-                      <div className="flex items-center justify-between mb-2">
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-3">
                         <label className="text-sm font-bold text-slate-700">Resume Content</label>
-                        <div className="flex gap-2">
-                          <label className="cursor-pointer text-[10px] font-bold text-brand hover:opacity-80 transition-opacity bg-brand/5 px-2 py-1 rounded">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <label className={cn(buttonPrimary, "cursor-pointer px-4 py-2 text-[11px] uppercase tracking-[0.18em]")}>
                             <input 
                               type="file" 
                               className="hidden" 
                               accept=".pdf,.doc,.docx"
-                              onChange={async (e) => {
-                                const file = e.target.files?.[0];
-                                if (!file) return;
-                                
-                                setIsLoading(true);
-                                try {
-                                  // For PDF parsing in the browser without complex workers
-                                  if (file.type === 'application/pdf') {
-                                    const reader = new FileReader();
-                                    reader.onload = async () => {
-                                      const typedarray = new Uint8Array(reader.result as ArrayBuffer);
-                                      const pdfjsLib = await import('pdfjs-dist');
-                                      pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
-                                      
-                                      const pdf = await pdfjsLib.getDocument(typedarray).promise;
-                                      let fullText = '';
-                                      for (let i = 1; i <= pdf.numPages; i++) {
-                                        const page = await pdf.getPage(i);
-                                        const textContent = await page.getTextContent();
-                                        const strings = textContent.items.map((item: any) => item.str);
-                                        fullText += strings.join(' ') + '\n';
-                                      }
-                                      setResumeText(fullText);
-                                      setIsLoading(false);
-                                    };
-                                    reader.readAsArrayBuffer(file);
-                                  } else if (file.name.endsWith('.docx')) {
-                                    showToast("DOCX support is limited. Try PDF if it fails.", 'info');
-                                    const reader = new FileReader();
-                                    reader.onload = async () => {
-                                      try {
-                                        const mammoth = await import('mammoth');
-                                        const result = await mammoth.extractRawText({ arrayBuffer: reader.result as ArrayBuffer });
-                                        setResumeText(result.value);
-                                      } catch (e) { showToast("DOCX Parse Error", 'error'); }
-                                      finally { setIsLoading(false); }
-                                    };
-                                    reader.readAsArrayBuffer(file);
-                                  } else {
-                                    showToast("Unsupported file format.", 'error');
-                                    setIsLoading(false);
-                                  }
-                                } catch (err) {
-                                  console.error(err);
-                                  showToast("Error parsing file. Try pasting text.", 'error');
-                                  setIsLoading(false);
-                                }
-                              }}
+                              onChange={handleFileChange}
                             />
-                            UPLOAD FILE (PDF)
+                            <Upload className="h-3.5 w-3.5" />
+                            Upload File
                           </label>
-                          <span className="text-[10px] text-slate-400">OR PASTE MARKDOWN</span>
+                          <button type="button" onClick={() => resumeRef.current?.focus()} className={cn(buttonSecondary, "px-4 py-2 text-[11px] uppercase tracking-[0.18em]")}>
+                            <FileText className="h-3.5 w-3.5" />
+                            Paste Markdown
+                          </button>
                         </div>
                       </div>
+                      <div className="pr-0 sm:pr-2">
                       <textarea 
-                        className="w-full h-40 p-4 rounded-xl border border-slate-200 bg-slate-50 focus:ring-2 focus:ring-brand focus:border-transparent transition-all outline-none font-mono text-[13px]"
+                        className="w-full h-36 sm:h-40 p-4 sm:p-5 rounded-[24px] border border-slate-200 bg-slate-50/80 focus:ring-2 focus:ring-brand/40 focus:bg-white focus:border-transparent transition-all outline-none font-mono text-[13px] text-slate-900 placeholder:text-slate-400 resize-none shadow-inner"
                         placeholder="Paste your resume content here..."
                         value={resumeText}
-                        onChange={(e) => setResumeText(e.target.value)}
+                          onChange={(e) => setResumeText(e.target.value)}
+                          ref={resumeRef}
                       />
+                      </div>
+
                     </div>
 
-                    <div className="grid md:grid-cols-2 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div>
                         <label className="block text-sm font-bold text-slate-700 mb-2">Target Job Description</label>
-                        <div className="bg-white rounded-xl border border-slate-200 p-2">
+                        <div className="bg-white/90 rounded-[24px] border border-slate-200 p-2.5 shadow-sm focus-within:ring-2 focus-within:ring-brand/40 focus-within:border-transparent transition-all">
                           <textarea 
-                            className="w-full h-32 p-4 rounded-md border-0 bg-transparent focus:outline-none text-[13px]"
+                            className="w-full h-24 p-2 rounded-[18px] border-0 bg-transparent focus:outline-none text-[13px] text-slate-900 placeholder:text-slate-400 resize-none hover:bg-slate-50/50 transition-colors"
                             placeholder="Paste the job requirements..."
                             value={jobDesc}
                             onChange={(e) => setJobDesc(e.target.value)}
@@ -376,9 +449,9 @@ export default function SmartHireApp() {
                       </div>
                       <div>
                         <label className="block text-sm font-bold text-slate-700 mb-2">Specific Interests</label>
-                        <div className="bg-white rounded-xl border border-slate-200 p-2">
+                        <div className="bg-white/90 rounded-[24px] border border-slate-200 p-2.5 shadow-sm focus-within:ring-2 focus-within:ring-brand/40 focus-within:border-transparent transition-all">
                           <textarea 
-                            className="w-full h-32 p-4 rounded-md border-0 bg-transparent focus:outline-none text-[13px]"
+                            className="w-full h-24 p-2 rounded-[18px] border-0 bg-transparent focus:outline-none text-[13px] text-slate-900 placeholder:text-slate-400 resize-none hover:bg-slate-50/50 transition-colors"
                             placeholder="e.g. Remote, Fintech, $120k+..."
                             value={interests}
                             onChange={(e) => setInterests(e.target.value)}
@@ -390,9 +463,10 @@ export default function SmartHireApp() {
                     <button 
                       onClick={startAnalysis}
                       disabled={isLoading || !resumeText || !jobDesc}
-                      className="w-full py-4 bg-brand text-white rounded-xl font-bold text-lg hover:bg-brand/90 transition-all flex items-center justify-center gap-2 shadow-[0_4px_14px_0_rgba(79,70,229,0.39)] disabled:opacity-50"
+                      className={cn(buttonPrimary, "w-full py-4 sm:py-4.5 rounded-[22px] text-base sm:text-lg disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none disabled:cursor-not-allowed disabled:translate-y-0 disabled:hover:bg-slate-200")}
                     >
-                      {isLoading ? "CALCULATING SELECTION RATE..." : "EXTRACT JOB MATCH SCORE"}
+                      <TrendingUp className="h-4 w-4" />
+                      {isLoading ? "Calculating selection rate..." : "Extract job match score"}
                     </button>
                   </div>
                 </Card>
@@ -683,43 +757,40 @@ export default function SmartHireApp() {
                     <h2 className="text-3xl font-black text-slate-900 tracking-tighter italic uppercase">USER_CONTROL_CENTER/SYSTEM_CONFIG</h2>
                     <div className="text-sm text-slate-500">Version <strong className="text-slate-800">v1.2.0</strong></div>
                   </div>
-
                   <div className="space-y-6">
                     <Card>
                       <div className="flex items-center gap-6">
-                        <div className="w-16 h-16 bg-gradient-to-tr from-brand to-indigo-400 rounded-xl flex items-center justify-center text-white font-black text-lg">SA</div>
+                        <div className="w-16 h-16 bg-linear-to-tr from-brand to-indigo-400 rounded-[20px] flex items-center justify-center text-white font-black text-lg shadow-lg shadow-brand/20">SA</div>
                         <div className="flex-1">
-                          <div className="text-sm font-bold text-slate-700">{userName || 'Rahul Sharma (Mock)'}</div>
-                          <div className="text-xs text-slate-400">{loginInput.email || 'rahul@example.com'}</div>
+                          <div className="text-sm font-bold text-slate-700">{userName || 'Your Name'}</div>
+                          <div className="text-xs text-slate-400">{loginInput.email || 'yourid@gmail.com'}</div>
                         </div>
-                        <button onClick={() => setShowLoginModal(true)} className="py-2 px-4 bg-slate-50 border border-slate-200 rounded-full text-sm font-bold">Manage Account</button>
+                        <button onClick={() => setShowLoginModal(true)} className={cn(buttonSecondary, "px-4 py-2 text-sm")}>Manage Account</button>
                       </div>
                     </Card>
 
                     <Card title="Preferences & Notifications">
                       <div className="grid gap-4">
-                        {[
-                          { key: 'ghostingProtection', title: 'Recruiter Ghosting Protection', desc: 'Automatically follow up if no response within 72h.' },
-                          { key: 'privacyMode', title: 'Deep Profile Privacy', desc: 'Anonymize work history identifiers for initial scrapers.' },
-                          { key: 'autoOutreach', title: 'Direct Recruiter Messages', desc: 'Allow AI to ping recruiters on LinkedIn automatically.' }
-                        ].map((item: any) => (
-                          <div key={item.key} className="flex items-center justify-between bg-white border border-slate-100 rounded-2xl p-4">
+                        {settingsOptions.map((item) => (
+                          <div key={item.key} className="flex items-center justify-between bg-white/90 border border-slate-100 rounded-[24px] p-4 shadow-sm">
                             <div>
                               <div className="text-sm font-bold text-slate-800">{item.title}</div>
                               <div className="text-[11px] text-slate-400">{item.desc}</div>
                             </div>
-                            <div 
+                            <button
+                              type="button"
+                              aria-pressed={settings[item.key]}
                               onClick={() => setSettings(s => ({ ...s, [item.key]: !s[item.key] }))}
                               className={cn(
-                                "w-14 h-8 rounded-full relative p-1 cursor-pointer transition-all",
-                                settings[item.key] ? "bg-brand shadow-[0_6px_18px_rgba(79,70,229,0.18)]" : "bg-slate-200"
+                                "w-16 h-9 rounded-full relative p-1 cursor-pointer transition-all border",
+                                settings[item.key] ? "bg-brand border-brand/20 shadow-[0_10px_26px_rgba(79,70,229,0.18)]" : "bg-slate-200 border-slate-300"
                               )}
                             >
                               <motion.div 
-                                animate={{ x: settings[item.key] ? 28 : 0 }}
-                                className="w-6 h-6 bg-white rounded-full shadow-sm flex items-center justify-center text-[10px] font-black"
+                                animate={{ x: settings[item.key] ? 32 : 0 }}
+                                className="w-7 h-7 bg-white rounded-full shadow-sm flex items-center justify-center text-[10px] font-black"
                               />
-                            </div>
+                            </button>
                           </div>
                         ))}
                       </div>
@@ -731,7 +802,7 @@ export default function SmartHireApp() {
                           setIsLoggedIn(false);
                           setStep('upload');
                         }}
-                        className="w-full py-4 text-white font-black rounded-2xl bg-gradient-to-r from-red-500 to-rose-400 hover:from-red-600 hover:to-rose-500 transition-all uppercase tracking-widest text-sm shadow-lg"
+                        className={cn(buttonDanger, "w-full py-4 text-sm uppercase tracking-widest")}
                       >
                         Destroy All Local Strategy Data & Logout
                       </button>
@@ -859,7 +930,7 @@ export default function SmartHireApp() {
                         <textarea 
                           value={userAnswer}
                           onChange={(e) => setUserAnswer(e.target.value)}
-                          className="w-full h-48 p-6 rounded-2xl border border-slate-200 bg-white shadow-inner focus:ring-2 focus:ring-brand outline-none text-slate-700 text-lg leading-relaxed"
+                          className="w-full h-48 p-6 rounded-2xl border border-slate-200 bg-white shadow-inner focus:ring-2 focus:ring-brand outline-none text-slate-900 placeholder:text-slate-400 text-lg leading-relaxed resize-none transition-all"
                           placeholder="Speak or type your answer here..."
                         />
                         <button 
@@ -924,19 +995,22 @@ export default function SmartHireApp() {
             )}
           </AnimatePresence>
         </div>
+      </div>
       </main>
 
       {/* Floating Prompt Loader */}
       {isLoading && (
-        <div className="fixed inset-0 bg-slate-950/20 backdrop-blur-sm z-[100] flex items-center justify-center">
+        <div className="fixed inset-0 bg-slate-950/20 backdrop-blur-sm z-100 flex items-center justify-center">
           <div className="bg-white p-8 rounded-3xl shadow-2xl flex flex-col items-center gap-6 max-w-sm text-center border-t-4 border-brand">
-            <div className="relative">
-              <div className="w-16 h-16 border-4 border-slate-100 border-t-brand rounded-full animate-spin" />
-              <Brain className="absolute inset-0 m-auto text-brand w-6 h-6 animate-pulse" />
+            <div className="relative flex items-center justify-center w-20 h-20">
+              <div className="absolute inset-0 w-full h-full border-4 border-slate-100 border-t-brand rounded-full animate-spin" />
+              <div className="w-10 h-10 bg-brand rounded-xl flex items-center justify-center z-10 shadow-inner">
+                <Zap className="w-6 h-6 fill-white text-white" />
+              </div>
             </div>
             <div>
-              <h4 className="font-extrabold text-slate-900 text-lg uppercase tracking-tight">AI Reasoning in Progress</h4>
-              <p className="text-slate-500 text-sm mt-1">Cross-referencing recruiter bias markers and semantic skill patterns...</p>
+              <h4 className="font-extrabold text-slate-900 text-lg uppercase tracking-tight">{loadingText.title || 'Loading'}</h4>
+              <p className="text-slate-500 text-sm mt-1">{loadingText.desc || 'Please wait a moment...'}</p>
             </div>
           </div>
         </div>
@@ -949,7 +1023,7 @@ export default function SmartHireApp() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-slate-950/60 backdrop-blur-md z-[110] flex items-center justify-center p-6"
+            className="fixed inset-0 bg-slate-950/60 backdrop-blur-md z-110 flex items-center justify-center p-6"
           >
             <motion.div 
               initial={{ scale: 0.9, y: 20 }}
@@ -1035,7 +1109,7 @@ export default function SmartHireApp() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-slate-950/40 backdrop-blur-sm z-[200] flex items-center justify-center p-6"
+            className="fixed inset-0 bg-slate-950/40 backdrop-blur-sm z-200 flex items-center justify-center p-6"
           >
             <motion.div 
               initial={{ scale: 0.9, opacity: 0 }}
@@ -1056,7 +1130,7 @@ export default function SmartHireApp() {
                   <input 
                     type="text" 
                     required
-                    className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 focus:ring-2 focus:ring-brand outline-none text-sm"
+                    className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 focus:ring-2 focus:ring-brand focus:bg-white outline-none text-sm text-slate-900 placeholder:text-slate-400 transition-all"
                     placeholder="Enter your name"
                     value={loginInput.name}
                     onChange={(e) => setLoginInput({ ...loginInput, name: e.target.value })}
@@ -1067,7 +1141,7 @@ export default function SmartHireApp() {
                   <input 
                     type="email" 
                     required
-                    className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 focus:ring-2 focus:ring-brand outline-none text-sm"
+                    className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 focus:ring-2 focus:ring-brand focus:bg-white outline-none text-sm text-slate-900 placeholder:text-slate-400 transition-all"
                     placeholder="name@example.com"
                     value={loginInput.email}
                     onChange={(e) => setLoginInput({ ...loginInput, email: e.target.value })}
