@@ -61,10 +61,10 @@ const Card = ({ children, title, className, headerAction }: { children: React.Re
 );
 
   const buttonBase = "inline-flex items-center justify-center gap-2 rounded-full font-semibold transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-brand/25 focus:ring-offset-2 focus:ring-offset-white active:scale-[0.99]";
-  const buttonPrimary = `${buttonBase} bg-brand text-white shadow-[0_18px_40px_-18px_rgba(79,70,229,0.6)] hover:-translate-y-0.5 hover:bg-indigo-600`;
-  const buttonSecondary = `${buttonBase} border border-slate-200 bg-white text-slate-700 shadow-sm hover:-translate-y-0.5 hover:border-slate-300 hover:text-slate-900 hover:bg-slate-50`;
-  const buttonPill = `${buttonBase} border border-white/10 bg-white/5 text-slate-200 hover:bg-white/10 hover:text-white`;
-  const buttonDanger = `${buttonBase} bg-linear-to-r from-red-500 to-rose-400 text-white shadow-[0_18px_40px_-22px_rgba(244,63,94,0.55)] hover:-translate-y-0.5 hover:from-red-600 hover:to-rose-500`;
+  const buttonPrimary = "inline-flex items-center justify-center gap-2 rounded-full font-semibold transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-brand/25 focus:ring-offset-2 focus:ring-offset-white active:scale-[0.99] bg-brand text-white shadow-[0_18px_40px_-18px_rgba(79,70,229,0.6)] hover:-translate-y-0.5 hover:bg-indigo-600";
+  const buttonSecondary = "inline-flex items-center justify-center gap-2 rounded-full font-semibold transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-brand/25 focus:ring-offset-2 focus:ring-offset-white active:scale-[0.99] border border-slate-200 bg-white text-slate-700 shadow-sm hover:-translate-y-0.5 hover:border-slate-300 hover:text-slate-900 hover:bg-slate-50";
+  const buttonPill = "inline-flex items-center justify-center gap-2 rounded-full font-semibold transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-brand/25 focus:ring-offset-2 focus:ring-offset-white active:scale-[0.99] border border-white/10 bg-white/5 text-slate-200 hover:bg-white/10 hover:text-white";
+  const buttonDanger = "inline-flex items-center justify-center gap-2 rounded-full font-semibold transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-brand/25 focus:ring-offset-2 focus:ring-offset-white active:scale-[0.99] bg-gradient-to-r from-red-500 to-rose-400 text-white shadow-[0_18px_40px_-22px_rgba(244,63,94,0.55)] hover:-translate-y-0.5 hover:from-red-600 hover:to-rose-500";
 
 const NavItem = ({ icon: Icon, label, active = false, onClick, loading = false }: { icon: any, label: string, active?: boolean, onClick?: () => void, loading?: boolean }) => (
   <div 
@@ -86,6 +86,7 @@ export default function SmartHireApp() {
   const [resumeText, setResumeText] = useState('');
   const [jobDesc, setJobDesc] = useState('');
   const [interests, setInterests] = useState('');
+  const [fieldErrors, setFieldErrors] = useState<{ resumeText?: string; jobDesc?: string }>({});
   const [isLoading, setIsLoading] = useState(false);
   const [loadingText, setLoadingText] = useState({ title: '', desc: '' });
   const [analysis, setAnalysis] = useState<any>(null);
@@ -101,15 +102,27 @@ export default function SmartHireApp() {
   const [evaluation, setEvaluation] = useState<any>(null);
 
   const startAnalysis = async () => {
-    if (!resumeText || !jobDesc) return;
+    const nextErrors: { resumeText?: string; jobDesc?: string } = {};
+
+    if (!resumeText.trim()) nextErrors.resumeText = 'This field is required.';
+    if (!jobDesc.trim()) nextErrors.jobDesc = 'This field is required.';
+
+    setFieldErrors(nextErrors);
+
+    if (nextErrors.resumeText || nextErrors.jobDesc) {
+      return;
+    }
+
     setLoadingText({ title: 'AI Reasoning in Progress', desc: 'Cross-referencing recruiter bias markers and semantic skill patterns...' });
     setIsLoading(true);
     try {
       const result = await analyzeResume(resumeText, jobDesc, interests.split(','));
       setAnalysis(result);
       setStep('analysis');
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
+      const message = error?.message || 'Analysis failed. Check your network or server and try again.';
+      showToast(message, 'error');
     } finally {
       setIsLoading(false);
     }
@@ -235,6 +248,7 @@ export default function SmartHireApp() {
   };
 
   const resumeRef = useRef<HTMLTextAreaElement | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   // Settings State
   const [settings, setSettings] = useState({
@@ -397,8 +411,8 @@ export default function SmartHireApp() {
                   <div className="inline-flex items-center gap-2 rounded-full border border-brand/10 bg-white/80 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.24em] text-brand shadow-sm mb-4">
                     <Sparkles className="h-3.5 w-3.5" /> SmartHire AI++
                   </div>
-                  <h1 className="text-4xl sm:text-5xl font-black text-slate-900 mb-3 tracking-tight leading-[1.02]">Recruiter-Grade Resume Intelligence</h1>
-                  <p className="text-slate-600 text-base sm:text-lg leading-relaxed">Stop applying blindly. Calculate your exact rejection probability before you hit submit.</p>
+                  <h1 className="text-[42px] sm:text-5xl font-black text-slate-900 mb-3 tracking-[-0.035em] leading-[1.02]">Recruiter-Grade Resume Intelligence</h1>
+                  <p className="text-slate-500 text-base sm:text-[17px] leading-relaxed mb-2">Stop applying blindly. Calculate your exact rejection probability before you hit submit.</p>
                 </div>
 
                 <Card className="p-5 sm:p-8 border-slate-300/60">
@@ -406,18 +420,23 @@ export default function SmartHireApp() {
                     <div>
                       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-3">
                         <label className="text-sm font-bold text-slate-700">Resume Content</label>
-                        <div className="flex flex-wrap items-center gap-2">
-                          <label className={cn(buttonPrimary, "cursor-pointer px-4 py-2 text-[11px] uppercase tracking-[0.18em]")}>
-                            <input 
-                              type="file" 
-                              className="hidden" 
-                              accept=".pdf,.doc,.docx"
-                              onChange={handleFileChange}
-                            />
+                        <div className="flex gap-2 shrink-0">
+                          <input
+                            ref={fileInputRef}
+                            type="file"
+                            className="hidden"
+                            accept=".pdf,.doc,.docx"
+                            onChange={handleFileChange}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => fileInputRef.current?.click()}
+                            className="inline-flex items-center justify-center gap-2 rounded-full bg-indigo-600 px-5 py-2.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-white shadow-[0_18px_40px_-18px_rgba(79,70,229,0.6)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-600/25 focus:ring-offset-2 focus:ring-offset-white"
+                          >
                             <Upload className="h-3.5 w-3.5" />
-                            Upload File
-                          </label>
-                          <button type="button" onClick={() => resumeRef.current?.focus()} className={cn(buttonSecondary, "px-4 py-2 text-[11px] uppercase tracking-[0.18em]")}>
+                            Upload Resume
+                          </button>
+                          <button type="button" onClick={() => resumeRef.current?.focus()} className={cn(buttonSecondary, "px-5 py-2.5 text-[11px] uppercase tracking-[0.18em]") }>
                             <FileText className="h-3.5 w-3.5" />
                             Paste Markdown
                           </button>
@@ -425,27 +444,43 @@ export default function SmartHireApp() {
                       </div>
                       <div className="pr-0 sm:pr-2">
                       <textarea 
-                        className="w-full h-36 sm:h-40 p-4 sm:p-5 rounded-[24px] border border-slate-200 bg-slate-50/80 focus:ring-2 focus:ring-brand/40 focus:bg-white focus:border-transparent transition-all outline-none font-mono text-[13px] text-slate-900 placeholder:text-slate-400 resize-none shadow-inner"
+                        className={cn(
+                          "w-full h-36 sm:h-40 p-4 sm:p-5 rounded-[24px] bg-slate-50/80 focus:ring-2 focus:ring-brand/40 focus:bg-white focus:border-transparent transition-all outline-none font-mono text-[13px] text-slate-900 placeholder:text-slate-400 resize-none shadow-inner border",
+                          fieldErrors.resumeText ? 'border-red-400 ring-2 ring-red-100 bg-red-50/70' : 'border-slate-200'
+                        )}
                         placeholder="Paste your resume content here..."
                         value={resumeText}
-                          onChange={(e) => setResumeText(e.target.value)}
+                          onChange={(e) => {
+                            setResumeText(e.target.value);
+                            if (fieldErrors.resumeText) setFieldErrors((current) => ({ ...current, resumeText: undefined }));
+                          }}
                           ref={resumeRef}
                       />
+                      {fieldErrors.resumeText && <p className="mt-2 text-xs font-semibold text-red-500">{fieldErrors.resumeText}</p>}
                       </div>
+
+                      <div className="border-t border-slate-100 my-6" />
 
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div>
                         <label className="block text-sm font-bold text-slate-700 mb-2">Target Job Description</label>
-                        <div className="bg-white/90 rounded-[24px] border border-slate-200 p-2.5 shadow-sm focus-within:ring-2 focus-within:ring-brand/40 focus-within:border-transparent transition-all">
+                        <div className={cn(
+                          "bg-white/90 rounded-[24px] p-2.5 shadow-sm focus-within:ring-2 focus-within:ring-brand/40 focus-within:border-transparent transition-all border",
+                          fieldErrors.jobDesc ? 'border-red-400 ring-2 ring-red-100 bg-red-50/70' : 'border-slate-200'
+                        )}>
                           <textarea 
                             className="w-full h-24 p-2 rounded-[18px] border-0 bg-transparent focus:outline-none text-[13px] text-slate-900 placeholder:text-slate-400 resize-none hover:bg-slate-50/50 transition-colors"
                             placeholder="Paste the job requirements..."
                             value={jobDesc}
-                            onChange={(e) => setJobDesc(e.target.value)}
+                            onChange={(e) => {
+                              setJobDesc(e.target.value);
+                              if (fieldErrors.jobDesc) setFieldErrors((current) => ({ ...current, jobDesc: undefined }));
+                            }}
                           />
                         </div>
+                        {fieldErrors.jobDesc && <p className="mt-2 text-xs font-semibold text-red-500">{fieldErrors.jobDesc}</p>}
                       </div>
                       <div>
                         <label className="block text-sm font-bold text-slate-700 mb-2">Specific Interests</label>
@@ -462,8 +497,11 @@ export default function SmartHireApp() {
 
                     <button 
                       onClick={startAnalysis}
-                      disabled={isLoading || !resumeText || !jobDesc}
-                      className={cn(buttonPrimary, "w-full py-4 sm:py-4.5 rounded-[22px] text-base sm:text-lg disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none disabled:cursor-not-allowed disabled:translate-y-0 disabled:hover:bg-slate-200")}
+                      disabled={isLoading}
+                      className={cn(
+                        buttonPrimary,
+                        "bg-indigo-600 hover:bg-indigo-700 focus:ring-indigo-600/25 w-full py-4 sm:py-4.5 rounded-2xl text-base sm:text-lg disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none disabled:cursor-not-allowed disabled:translate-y-0 disabled:hover:bg-slate-200"
+                      )}
                     >
                       <TrendingUp className="h-4 w-4" />
                       {isLoading ? "Calculating selection rate..." : "Extract job match score"}
