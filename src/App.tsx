@@ -154,6 +154,16 @@ export default function SmartHireApp() {
       setUserAnswer('');
     } catch (error) {
       console.error(error);
+      // Fallback: if the API is unreachable, present a local sample question
+      const fallback = {
+        question: 'Describe a time you shipped a critical feature under a tight deadline.',
+        context: 'We are assessing ownership, trade-offs, and impact.'
+      };
+      showToast('Interview API unavailable — using a local sample question.', 'info');
+      setCurrentQuestion(fallback);
+      setStep('interview');
+      setEvaluation(null);
+      setUserAnswer('');
     } finally {
       setIsLoading(false);
     }
@@ -371,8 +381,8 @@ export default function SmartHireApp() {
 
         <div className="flex-1 overflow-y-auto relative h-full hide-scrollbar">
           {/* Top Mini Nav */}
-        {!isLoggedIn && (
-           <div className="absolute top-6 right-8 z-30">
+          {!isLoggedIn && (
+            <div className="absolute top-6 right-8 z-60">
               <button 
                 onClick={() => setShowLoginModal(true)}
                 className={cn(buttonPill, "px-5 py-2.5 bg-slate-900 text-white border-slate-900/10 shadow-lg hover:shadow-xl")}
@@ -621,12 +631,12 @@ export default function SmartHireApp() {
 
                   {/* Fix & Apply Side */}
                   {!improvement ? (
-                    <div className="h-full bg-brand p-8 rounded-2xl flex flex-col items-center justify-center text-center text-white shadow-lg space-y-6">
+                    <div className="h-full bg-indigo-600 p-8 rounded-2xl flex flex-col items-center justify-center text-center text-white shadow-lg space-y-6">
                       <h3 className="text-2xl font-black italic tracking-tighter">AI TRANSFORMATION READY</h3>
                       <p className="text-white/80 text-sm max-w-xs">Boost selection probability from {analysis.selectionProbability}% → 89% in 5 seconds.</p>
                       <button 
                         onClick={handleFixResume}
-                        className="px-8 py-3.5 bg-white text-brand rounded-full font-extrabold text-sm hover:scale-105 transition-all shadow-xl active:scale-95"
+                        className="px-8 py-3.5 bg-white text-indigo-600 rounded-full font-extrabold text-sm hover:scale-105 transition-all shadow-xl active:scale-95"
                       >
                         ⚡ FIX RESUME & APPLY SMARTLY
                       </button>
@@ -706,7 +716,7 @@ export default function SmartHireApp() {
                 className="space-y-8"
               >
                 <div className="flex items-center justify-between mb-8">
-                  <h2 className="text-3xl font-black text-slate-900 tracking-tighter italic uppercase">SKILL_ENGINE/RADAR_DYNAMICS</h2>
+                  <h2 className="text-3xl font-black text-slate-900 tracking-tighter italic">Skill Radar</h2>
                   <button onClick={() => setStep('analysis')} className="text-brand font-bold text-sm">Dashboard</button>
                 </div>
 
@@ -792,7 +802,7 @@ export default function SmartHireApp() {
               >
                 <div className="flex flex-col gap-6">
                   <div className="flex items-center justify-between">
-                    <h2 className="text-3xl font-black text-slate-900 tracking-tighter italic uppercase">USER_CONTROL_CENTER/SYSTEM_CONFIG</h2>
+                    <h2 className="text-3xl font-black text-slate-900 tracking-tighter italic">Settings</h2>
                     <div className="text-sm text-slate-500">Version <strong className="text-slate-800">v1.2.0</strong></div>
                   </div>
                   <div className="space-y-6">
@@ -801,7 +811,7 @@ export default function SmartHireApp() {
                         <div className="w-16 h-16 bg-linear-to-tr from-brand to-indigo-400 rounded-[20px] flex items-center justify-center text-white font-black text-lg shadow-lg shadow-brand/20">SA</div>
                         <div className="flex-1">
                           <div className="text-sm font-bold text-slate-700">{userName || 'Your Name'}</div>
-                          <div className="text-xs text-slate-400">{loginInput.email || 'yourid@gmail.com'}</div>
+                          <div className="text-xs text-slate-400">{loginInput.email}</div>
                         </div>
                         <button onClick={() => setShowLoginModal(true)} className={cn(buttonSecondary, "px-4 py-2 text-sm")}>Manage Account</button>
                       </div>
@@ -871,7 +881,7 @@ export default function SmartHireApp() {
                 className="max-w-4xl mx-auto space-y-8"
               >
                 <div className="flex items-center justify-between mb-8">
-                  <h2 className="text-3xl font-black text-slate-900 tracking-tighter italic whitespace-nowrap">CAREER_WAR_ROOM/60_DAY_STRATEGY</h2>
+                  <h2 className="text-3xl font-black text-slate-900 tracking-tighter italic whitespace-nowrap">60-Day Career Strategy</h2>
                   <button 
                     onClick={() => setStep('analysis')}
                     className="text-brand font-bold text-sm flex items-center gap-1 group"
@@ -887,14 +897,14 @@ export default function SmartHireApp() {
                         <div className="flex flex-col items-center">
                           <div className={cn(
                             "w-10 h-10 rounded-full border-4 border-white shadow-sm flex items-center justify-center font-bold text-xs ring-4 ring-slate-100",
-                            item.priority === 'High' ? "bg-red-500 text-white" : "bg-brand text-white"
+                            item.priority === 'High' ? "bg-red-500 text-white" : "bg-indigo-600 text-white"
                           )}>
                             {item.day}
                           </div>
                           <div className="flex-1 w-0.5 bg-slate-200 mt-2 mb-2 group-last:hidden" />
                         </div>
                         <div className="flex-1 pb-10">
-                          <Card className="hover:border-brand transition-all">
+                          <Card className="hover:border-indigo-600 transition-all">
                             <div className="flex items-center gap-3 mb-3">
                               <span className={cn(
                                 "text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded",
@@ -913,7 +923,7 @@ export default function SmartHireApp() {
                   <div className="space-y-6">
                     <Card title="Quick Actions">
                       <div className="space-y-3">
-                        <button onClick={() => startInterview()} className="w-full py-3 bg-brand text-white rounded-xl text-[13px] font-bold hover:shadow-lg transition-all">Practice Interviews</button>
+                        <button onClick={() => startInterview()} className="w-full py-3 bg-indigo-600 text-white rounded-xl text-[13px] font-bold hover:shadow-lg transition-all">Practice Interviews</button>
                         <button className="w-full py-3 border border-slate-200 text-slate-600 rounded-xl text-[13px] font-bold hover:bg-slate-50 transition-all">Daily Skill Tracker</button>
                       </div>
                     </Card>
@@ -935,7 +945,7 @@ export default function SmartHireApp() {
                 className="max-w-4xl mx-auto space-y-8"
               >
                 <div className="flex items-center justify-between mb-8">
-                  <h2 className="text-3xl font-black text-slate-900 tracking-tighter italic uppercase">Interview_Simulator/Active_Session</h2>
+                  <h2 className="text-3xl font-black text-slate-900 tracking-tighter italic">Interview Simulator</h2>
                   <div className="flex gap-2">
                     {['Startup Founder', 'Strict HR', 'Technical Lead'].map((p) => (
                       <button 
