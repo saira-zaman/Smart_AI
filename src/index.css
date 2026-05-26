@@ -17,3 +17,17 @@
     @apply bg-slate-100 text-slate-900;
   }
 }
+
+/* Make the app fill the viewport so sticky/fixed elements align correctly */
+html, body, #root {
+  height: 100%;
+}
+
+/* Utility to hide native scrollbars but preserve scrolling */
+.hide-scrollbar {
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
+}
+.hide-scrollbar::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
+}

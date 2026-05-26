@@ -156,6 +156,13 @@ export default function SmartHireApp() {
   const [userName, setUserName] = useState('');
   const [loginInput, setLoginInput] = useState({ name: '', email: 'sairazaman101@gmail.com' });
 
+  // Toast / notification
+  const [toast, setToast] = useState<{ message: string; type?: 'info' | 'error' } | null>(null);
+  const showToast = (message: string, type: 'info' | 'error' = 'info') => {
+    setToast({ message, type });
+    window.setTimeout(() => setToast(null), 3500);
+  };
+
   // Settings State
   const [settings, setSettings] = useState({
     ghostingProtection: true,
@@ -193,13 +200,13 @@ export default function SmartHireApp() {
 
         <nav className="flex-1 space-y-2">
           <NavItem icon={LayoutDashboard} label="Dashboard" active={step === 'analysis'} onClick={() => analysis ? setStep('analysis') : setStep('upload')} />
-          <NavItem icon={Radar} label="Skill Radar" active={step === 'radar'} onClick={() => analysis ? setStep('radar') : alert("Please upload and analyze a resume first.")} />
+          <NavItem icon={Radar} label="Skill Radar" active={step === 'radar'} onClick={() => analysis ? setStep('radar') : showToast("Please upload and analyze a resume first.", 'error')} />
           <NavItem 
             icon={Video} 
             label="Interview Sim" 
             active={step === 'interview'} 
             loading={isLoading && step === 'interview'}
-            onClick={() => analysis ? startInterview() : alert("Please analyze a resume first.")} 
+            onClick={() => analysis ? startInterview() : showToast("Please analyze a resume first.", 'error')}
           />
           <NavItem 
             icon={Map} 
@@ -212,7 +219,7 @@ export default function SmartHireApp() {
                 setStep('strategy'); // Set step early so loader shows in right place
                 generateStrategy();
               }
-              else alert("Please analyze a resume first.");
+              else showToast("Please analyze a resume first.", 'error');
             }} 
           />
           <NavItem icon={Settings} label="Settings" active={step === 'settings'} onClick={() => setStep('settings')} />
@@ -239,7 +246,7 @@ export default function SmartHireApp() {
       </aside>
 
       {/* Main Content Area */}
-      <main className="flex-1 overflow-y-auto relative h-full">
+      <main className="flex-1 overflow-y-auto relative h-full hide-scrollbar">
         {/* Top Mini Nav */}
         {!isLoggedIn && (
            <div className="absolute top-6 right-8 z-30">
@@ -252,6 +259,22 @@ export default function SmartHireApp() {
            </div>
         )}
         <div className="p-8 max-w-7xl mx-auto space-y-8">
+          <AnimatePresence>
+            {toast && (
+              <motion.div
+                key="toast"
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                className={cn(
+                  'fixed left-1/2 -translate-x-1/2 top-6 z-50 px-4 py-2 rounded-full text-sm font-bold shadow-lg',
+                  toast.type === 'error' ? 'bg-red-600 text-white' : 'bg-slate-800 text-white'
+                )}
+              >
+                {toast.message}
+              </motion.div>
+            )}
+          </AnimatePresence>
           <AnimatePresence mode="wait">
             {step === 'upload' && (
               <motion.div 
@@ -304,24 +327,24 @@ export default function SmartHireApp() {
                                     };
                                     reader.readAsArrayBuffer(file);
                                   } else if (file.name.endsWith('.docx')) {
-                                    alert("DOCX support is limited. Try PDF if it fails.");
+                                    showToast("DOCX support is limited. Try PDF if it fails.", 'info');
                                     const reader = new FileReader();
                                     reader.onload = async () => {
                                       try {
                                         const mammoth = await import('mammoth');
                                         const result = await mammoth.extractRawText({ arrayBuffer: reader.result as ArrayBuffer });
                                         setResumeText(result.value);
-                                      } catch (e) { alert("DOCX Parse Error"); }
+                                      } catch (e) { showToast("DOCX Parse Error", 'error'); }
                                       finally { setIsLoading(false); }
                                     };
                                     reader.readAsArrayBuffer(file);
                                   } else {
-                                    alert("Unsupported file format.");
+                                    showToast("Unsupported file format.", 'error');
                                     setIsLoading(false);
                                   }
                                 } catch (err) {
                                   console.error(err);
-                                  alert("Error parsing file. Try pasting text.");
+                                  showToast("Error parsing file. Try pasting text.", 'error');
                                   setIsLoading(false);
                                 }
                               }}
@@ -342,21 +365,25 @@ export default function SmartHireApp() {
                     <div className="grid md:grid-cols-2 gap-6">
                       <div>
                         <label className="block text-sm font-bold text-slate-700 mb-2">Target Job Description</label>
-                        <textarea 
-                          className="w-full h-32 p-4 rounded-xl border border-slate-200 bg-slate-50 focus:ring-2 focus:ring-brand focus:border-transparent transition-all outline-none text-[13px]"
-                          placeholder="Paste the job requirements..."
-                          value={jobDesc}
-                          onChange={(e) => setJobDesc(e.target.value)}
-                        />
+                        <div className="bg-white rounded-xl border border-slate-200 p-2">
+                          <textarea 
+                            className="w-full h-32 p-4 rounded-md border-0 bg-transparent focus:outline-none text-[13px]"
+                            placeholder="Paste the job requirements..."
+                            value={jobDesc}
+                            onChange={(e) => setJobDesc(e.target.value)}
+                          />
+                        </div>
                       </div>
                       <div>
                         <label className="block text-sm font-bold text-slate-700 mb-2">Specific Interests</label>
-                        <textarea 
-                          className="w-full h-32 p-4 rounded-xl border border-slate-200 bg-slate-50 focus:ring-2 focus:ring-brand focus:border-transparent transition-all outline-none text-[13px]"
-                          placeholder="e.g. Remote, Fintech, $120k+..."
-                          value={interests}
-                          onChange={(e) => setInterests(e.target.value)}
-                        />
+                        <div className="bg-white rounded-xl border border-slate-200 p-2">
+                          <textarea 
+                            className="w-full h-32 p-4 rounded-md border-0 bg-transparent focus:outline-none text-[13px]"
+                            placeholder="e.g. Remote, Fintech, $120k+..."
+                            value={interests}
+                            onChange={(e) => setInterests(e.target.value)}
+                          />
+                        </div>
                       </div>
                     </div>
 
@@ -651,102 +678,65 @@ export default function SmartHireApp() {
                 animate={{ opacity: 1, y: 0 }}
                 className="max-w-2xl mx-auto space-y-8"
               >
-                <h2 className="text-3xl font-black text-slate-900 tracking-tighter italic uppercase">USER_CONTROL_CENTER/SYSTEM_CONFIG</h2>
-                
-                <div className="space-y-6">
-                  <Card title="Profile Information">
-                    <div className="space-y-4">
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 ml-1">Account Display Name</label>
-                          <input 
-                            type="text" 
-                            disabled
-                            value={userName || 'Rahul Sharma (Mock)'}
-                            className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 text-sm font-bold text-slate-400 cursor-not-allowed"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 ml-1">Email Connection</label>
-                          <input 
-                            type="text" 
-                            disabled
-                            value={loginInput.email || 'rahul@example.com'}
-                            className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 text-sm font-bold text-slate-400 cursor-not-allowed"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  </Card>
+                <div className="flex flex-col gap-6">
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-3xl font-black text-slate-900 tracking-tighter italic uppercase">USER_CONTROL_CENTER/SYSTEM_CONFIG</h2>
+                    <div className="text-sm text-slate-500">Version <strong className="text-slate-800">v1.2.0</strong></div>
+                  </div>
 
-                  <Card title="Preferences & Notifications">
-                    <div className="divide-y divide-slate-100">
-                      <div className="py-4 flex items-center justify-between">
-                        <div>
-                          <div className="text-sm font-bold text-slate-800">Recruiter Ghosting Protection</div>
-                          <div className="text-[11px] text-slate-400">Automatically follow up if no response within 72h.</div>
+                  <div className="space-y-6">
+                    <Card>
+                      <div className="flex items-center gap-6">
+                        <div className="w-16 h-16 bg-gradient-to-tr from-brand to-indigo-400 rounded-xl flex items-center justify-center text-white font-black text-lg">SA</div>
+                        <div className="flex-1">
+                          <div className="text-sm font-bold text-slate-700">{userName || 'Rahul Sharma (Mock)'}</div>
+                          <div className="text-xs text-slate-400">{loginInput.email || 'rahul@example.com'}</div>
                         </div>
-                        <div 
-                          onClick={() => setSettings(s => ({ ...s, ghostingProtection: !s.ghostingProtection }))}
-                          className={cn(
-                            "w-12 h-6 rounded-full relative p-1 cursor-pointer transition-colors",
-                            settings.ghostingProtection ? "bg-brand" : "bg-slate-200"
-                          )}
-                        >
-                          <motion.div 
-                            animate={{ x: settings.ghostingProtection ? 24 : 0 }}
-                            className="w-4 h-4 bg-white rounded-full shadow-sm" 
-                          />
-                        </div>
+                        <button onClick={() => setShowLoginModal(true)} className="py-2 px-4 bg-slate-50 border border-slate-200 rounded-full text-sm font-bold">Manage Account</button>
                       </div>
-                      <div className="py-4 flex items-center justify-between">
-                        <div>
-                          <div className="text-sm font-bold text-slate-800">Deep Profile Privacy</div>
-                          <div className="text-[11px] text-slate-400">Anonymize work history identifiers for initial scrapers.</div>
-                        </div>
-                        <div 
-                          onClick={() => setSettings(s => ({ ...s, privacyMode: !s.privacyMode }))}
-                          className={cn(
-                            "w-12 h-6 rounded-full relative p-1 cursor-pointer transition-colors",
-                            settings.privacyMode ? "bg-brand" : "bg-slate-200"
-                          )}
-                        >
-                          <motion.div 
-                            animate={{ x: settings.privacyMode ? 24 : 0 }}
-                            className="w-4 h-4 bg-white rounded-full shadow-sm" 
-                          />
-                        </div>
-                      </div>
-                      <div className="py-4 flex items-center justify-between">
-                        <div>
-                          <div className="text-sm font-bold text-slate-800">Direct Recruiter Messages</div>
-                          <div className="text-[11px] text-slate-400">Allow AI to ping recruiters on LinkedIn automatically.</div>
-                        </div>
-                        <div 
-                          onClick={() => setSettings(s => ({ ...s, autoOutreach: !s.autoOutreach }))}
-                          className={cn(
-                            "w-12 h-6 rounded-full relative p-1 cursor-pointer transition-colors",
-                            settings.autoOutreach ? "bg-brand" : "bg-slate-200"
-                          )}
-                        >
-                          <motion.div 
-                            animate={{ x: settings.autoOutreach ? 24 : 0 }}
-                            className="w-4 h-4 bg-white rounded-full shadow-sm" 
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  </Card>
+                    </Card>
 
-                  <button 
-                    onClick={() => {
-                      setIsLoggedIn(false);
-                      setStep('upload');
-                    }}
-                    className="w-full py-4 text-red-500 font-black border-2 border-red-100 rounded-2xl hover:bg-red-50 transition-all uppercase tracking-widest text-xs"
-                  >
-                    Destroy All Local Strategy Data & Logout
-                  </button>
+                    <Card title="Preferences & Notifications">
+                      <div className="grid gap-4">
+                        {[
+                          { key: 'ghostingProtection', title: 'Recruiter Ghosting Protection', desc: 'Automatically follow up if no response within 72h.' },
+                          { key: 'privacyMode', title: 'Deep Profile Privacy', desc: 'Anonymize work history identifiers for initial scrapers.' },
+                          { key: 'autoOutreach', title: 'Direct Recruiter Messages', desc: 'Allow AI to ping recruiters on LinkedIn automatically.' }
+                        ].map((item: any) => (
+                          <div key={item.key} className="flex items-center justify-between bg-white border border-slate-100 rounded-2xl p-4">
+                            <div>
+                              <div className="text-sm font-bold text-slate-800">{item.title}</div>
+                              <div className="text-[11px] text-slate-400">{item.desc}</div>
+                            </div>
+                            <div 
+                              onClick={() => setSettings(s => ({ ...s, [item.key]: !s[item.key] }))}
+                              className={cn(
+                                "w-14 h-8 rounded-full relative p-1 cursor-pointer transition-all",
+                                settings[item.key] ? "bg-brand shadow-[0_6px_18px_rgba(79,70,229,0.18)]" : "bg-slate-200"
+                              )}
+                            >
+                              <motion.div 
+                                animate={{ x: settings[item.key] ? 28 : 0 }}
+                                className="w-6 h-6 bg-white rounded-full shadow-sm flex items-center justify-center text-[10px] font-black"
+                              />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </Card>
+
+                    <div className="pt-4">
+                      <button 
+                        onClick={() => {
+                          setIsLoggedIn(false);
+                          setStep('upload');
+                        }}
+                        className="w-full py-4 text-white font-black rounded-2xl bg-gradient-to-r from-red-500 to-rose-400 hover:from-red-600 hover:to-rose-500 transition-all uppercase tracking-widest text-sm shadow-lg"
+                      >
+                        Destroy All Local Strategy Data & Logout
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </motion.div>
             )}
