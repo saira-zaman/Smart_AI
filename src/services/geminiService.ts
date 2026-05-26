@@ -1,64 +1,37 @@
-export async function analyzeResume(resumeText: string, jobDescription: string, interests: string[]) {
-  const res = await fetch('/api/gemini/analyze', {
+// Client-side wrapper: forward requests to a secure server endpoint.
+// The server (e.g. Vercel functions) will hold the real GEMINI_API_KEY.
+
+async function post(action: string, payload: any) {
+  const res = await fetch('/api/gemini', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ resumeText, jobDescription, interests })
+    body: JSON.stringify({ action, ...payload })
   });
+
   if (!res.ok) {
     const text = await res.text();
-    throw new Error(text || 'Failed to call analyze API');
+    throw new Error(`API error: ${res.status} ${text}`);
   }
+
   return res.json();
+}
+
+export async function analyzeResume(resumeText: string, jobDescription: string, interests: string[]) {
+  return post('analyze', { resumeText, jobDescription, interests });
 }
 
 export async function fixAndApply(resumeText: string, jobDescription: string, analysis: any) {
-  const res = await fetch('/api/gemini/fixAndApply', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ resumeText, jobDescription, analysis })
-  });
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(text || 'Failed to call fixAndApply API');
-  }
-  return res.json();
-}
-
-export async function getCareerStrategy(resumeText: string, jobDescription: string) {
-  const res = await fetch('/api/gemini/strategy', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ resumeText, jobDescription })
-  });
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(text || 'Failed to call strategy API');
-  }
-  return res.json();
+  return post('improve', { resumeText, jobDescription, analysis });
 }
 
 export async function getInterviewQuestion(persona: string, jobDescription: string, resumeText: string) {
-  const res = await fetch('/api/gemini/interviewQuestion', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ persona, jobDescription, resumeText })
-  });
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(text || 'Failed to call interviewQuestion API');
-  }
-  return res.json();
+  return post('interview', { persona, jobDescription, resumeText });
 }
 
-export async function evaluateAnswer(question: string, userAnswer: string, persona: string) {
-  const res = await fetch('/api/gemini/evaluate', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ question, userAnswer, persona })
-  });
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(text || 'Failed to call evaluate API');
-  }
-  return res.json();
+export async function evaluateAnswer(question: string, answer: string, persona: string) {
+  return post('evaluate', { question, answer, persona });
+}
+
+export async function getCareerStrategy(resumeText: string, jobDescription: string) {
+  return post('strategy', { resumeText, jobDescription });
 }

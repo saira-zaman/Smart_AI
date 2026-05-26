@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { 
   RadarChart, 
   PolarGrid, 
@@ -76,36 +76,12 @@ export default function SmartHireApp() {
   const [isApplying, setIsApplying] = useState(false);
   const [hasApplied, setHasApplied] = useState(false);
   const [error, setError] = useState<string>('');
-  const [apiReady, setApiReady] = useState<boolean | null>(null);
 
   // Interview state
   const [interviewPersona, setInterviewPersona] = useState<string>('Startup Founder');
   const [currentQuestion, setCurrentQuestion] = useState<any>(null);
   const [userAnswer, setUserAnswer] = useState('');
   const [evaluation, setEvaluation] = useState<any>(null);
-
-  // Check API health on mount
-  useEffect(() => {
-    const checkApi = async () => {
-      try {
-        const res = await fetch('/api/gemini/analyze', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ resumeText: 'test', jobDescription: 'test', interests: [] })
-        });
-        const data = await res.json();
-        if (data.error && data.error.includes('GEMINI_API_KEY')) {
-          setApiReady(false);
-          setError('🔑 API Key Missing: Please set GEMINI_API_KEY in Vercel Environment Variables');
-        } else {
-          setApiReady(true);
-        }
-      } catch (err) {
-        setApiReady(true); // Assume working if network error (might be dev)
-      }
-    };
-    checkApi();
-  }, []);
 
   const startAnalysis = async () => {
     if (!resumeText || !jobDesc) return;
@@ -222,93 +198,6 @@ export default function SmartHireApp() {
 
   return (
     <div className="flex h-screen bg-slate-100 overflow-hidden text-slate-800 selection:bg-brand/10">
-      {/* Setup Screen if API not ready */}
-      {apiReady === false && (
-        <div className="flex-1 flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-slate-950">
-          <div className="max-w-2xl w-full mx-auto px-8 text-center">
-            <div className="mb-8">
-              <div className="w-20 h-20 bg-brand/20 rounded-full flex items-center justify-center mx-auto mb-6">
-                <AlertCircle className="w-10 h-10 text-brand" />
-              </div>
-              <h1 className="text-4xl font-bold text-white mb-4">Setup Required</h1>
-              <p className="text-slate-300 text-lg mb-8">
-                SmartHire AI++ needs your Google Gemini API key to work
-              </p>
-            </div>
-
-            <div className="bg-slate-800 border border-slate-700 rounded-2xl p-8 mb-8">
-              <h2 className="text-xl font-bold text-white mb-6">Follow These Steps:</h2>
-              
-              <div className="space-y-6 text-left">
-                <div className="flex gap-4">
-                  <div className="flex-shrink-0">
-                    <div className="flex items-center justify-center h-10 w-10 rounded-lg bg-brand text-white font-bold">1</div>
-                  </div>
-                  <div>
-                    <h3 className="text-white font-bold mb-2">Get Your API Key</h3>
-                    <p className="text-slate-300 text-sm">
-                      Go to <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer" className="text-brand hover:underline">aistudio.google.com/apikey</a>
-                    </p>
-                    <p className="text-slate-400 text-xs mt-1">Create a free Google Gemini API key (takes 1 minute)</p>
-                  </div>
-                </div>
-
-                <div className="flex gap-4">
-                  <div className="flex-shrink-0">
-                    <div className="flex items-center justify-center h-10 w-10 rounded-lg bg-brand text-white font-bold">2</div>
-                  </div>
-                  <div>
-                    <h3 className="text-white font-bold mb-2">Go to Vercel Dashboard</h3>
-                    <p className="text-slate-300 text-sm">
-                      Go to <a href="https://vercel.com/dashboard" target="_blank" rel="noopener noreferrer" className="text-brand hover:underline">vercel.com/dashboard</a>
-                    </p>
-                    <p className="text-slate-400 text-xs mt-1">Find your SmartHire AI++ project</p>
-                  </div>
-                </div>
-
-                <div className="flex gap-4">
-                  <div className="flex-shrink-0">
-                    <div className="flex items-center justify-center h-10 w-10 rounded-lg bg-brand text-white font-bold">3</div>
-                  </div>
-                  <div>
-                    <h3 className="text-white font-bold mb-2">Add Environment Variable</h3>
-                    <p className="text-slate-300 text-sm">
-                      Go to <strong>Settings → Environment Variables</strong>
-                    </p>
-                    <p className="text-slate-400 text-xs mt-2">Add:</p>
-                    <div className="bg-slate-900 p-3 rounded mt-2 font-mono text-xs text-slate-200">
-                      GEMINI_API_KEY = your_api_key_here
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex gap-4">
-                  <div className="flex-shrink-0">
-                    <div className="flex items-center justify-center h-10 w-10 rounded-lg bg-brand text-white font-bold">4</div>
-                  </div>
-                  <div>
-                    <h3 className="text-white font-bold mb-2">Redeploy</h3>
-                    <p className="text-slate-300 text-sm">
-                      Go to <strong>Deployments → Redeploy</strong> latest commit
-                    </p>
-                    <p className="text-slate-400 text-xs mt-1">Wait 2-3 minutes for deploy to complete</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <button 
-              onClick={() => setApiReady(true)}
-              className="px-8 py-3 bg-brand text-white rounded-full font-bold hover:bg-brand/90 transition-all"
-            >
-              Refresh & Try Again
-            </button>
-          </div>
-        </div>
-      )}
-
-      {apiReady !== false && (
-        <>
       {/* Sidebar */}
       <aside className="w-[260px] bg-slate-950 flex flex-col p-6 shrink-0 z-20">
         <div className="flex items-center gap-2 mb-10 px-2 text-slate-50 cursor-pointer" onClick={() => setStep('upload')}>
@@ -387,14 +276,14 @@ export default function SmartHireApp() {
         )}
         {/* Top Mini Nav */}
         {!isLoggedIn && (
-           <div className="absolute top-6 right-8 z-30">
-              <button 
-                onClick={() => setShowLoginModal(true)}
-                className="px-6 py-2 bg-slate-900 text-white text-xs font-bold rounded-full hover:bg-black transition-all shadow-lg"
-              >
-                Sign In
-              </button>
-           </div>
+          <div className="absolute top-6 right-8 z-30">
+            <button
+              onClick={() => setShowLoginModal(true)}
+              className="px-6 py-2 bg-slate-900 text-white text-xs font-bold rounded-full hover:bg-black transition-all shadow-lg"
+            >
+              Sign In
+            </button>
+          </div>
         )}
         <div className="p-8 max-w-7xl mx-auto space-y-8" style={{ marginTop: error ? '80px' : '0' }}>
           <AnimatePresence mode="wait">
@@ -406,11 +295,6 @@ export default function SmartHireApp() {
                 exit={{ opacity: 0 }}
                 className="max-w-3xl mx-auto py-12"
               >
-                <div className="mb-10 text-center">
-                  <h1 className="text-4xl font-extrabold text-slate-900 mb-4 tracking-tight">Recruiter-Grade Resume Intelligence</h1>
-                  <p className="text-slate-500">Stop applying blindly. Calculate your exact rejection probability before you hit submit.</p>
-                </div>
-
                 <Card className="p-10 border-slate-300 shadow-xl">
                   <div className="space-y-6">
                     <div>
@@ -1247,8 +1131,6 @@ export default function SmartHireApp() {
           </motion.div>
         )}
       </AnimatePresence>
-        </>
-      )}
     </div>
   );
 }
