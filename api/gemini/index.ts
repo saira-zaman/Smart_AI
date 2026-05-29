@@ -1,6 +1,7 @@
 import { GoogleGenAI, Type } from "@google/genai";
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+const model = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
 
 const ANALYSIS_SCHEMA = {
   type: Type.OBJECT,
@@ -101,7 +102,7 @@ export default async function handler(req: any, res: any) {
       const prompt = `Analyze this resume for a candidate interested in "${(interests || []).join(', ')}".\nTarget Job Description: ${jobDescription}\nResume Content: ${resumeText}\nProvide a brutally honest recruiter-style analysis. Identify missing skills and estimate time to learn them. Calculate a realistic selection probability.`;
 
       const response = await ai.models.generateContent({
-        model: 'gemini-3-flash-preview',
+        model,
         contents: prompt,
         config: { responseMimeType: 'application/json', responseSchema: ANALYSIS_SCHEMA as any }
       });
@@ -114,7 +115,7 @@ export default async function handler(req: any, res: any) {
       const prompt = `Based on the following analysis and job description, rewrite the resume to maximize selection probability. Job Description: ${jobDescription} Original Resume: ${resumeText} Previous Analysis: ${JSON.stringify(analysis)} Use the Google XYZ formula for bullet points. Optimize for ATS. Also generate a cover letter and outreach messages.`;
 
       const response = await ai.models.generateContent({
-        model: 'gemini-3-flash-preview',
+        model,
         contents: prompt,
         config: { responseMimeType: 'application/json', responseSchema: IMPROVEMENT_SCHEMA as any }
       });
@@ -127,7 +128,7 @@ export default async function handler(req: any, res: any) {
       const prompt = `Act as a "${persona}" interviewer. Based on this job description: ${jobDescription} And this candidate's resume: ${resumeText} Ask ONE dynamic, high-stakes interview question.`;
 
       const response = await ai.models.generateContent({
-        model: 'gemini-3-flash-preview',
+        model,
         contents: prompt,
         config: { responseMimeType: 'application/json', responseSchema: INTERVIEW_SCHEMA as any }
       });
@@ -140,7 +141,7 @@ export default async function handler(req: any, res: any) {
       const prompt = `Evaluate the candidate's answer to the question: "${question}" The candidate's answer: "${answer}" The interviewer persona is: "${persona}" Provide constructive feedback and a score (0-100), and a significantly improved version of the answer.`;
 
       const response = await ai.models.generateContent({
-        model: 'gemini-3-flash-preview',
+        model,
         contents: prompt,
         config: { responseMimeType: 'application/json', responseSchema: EVALUATION_SCHEMA as any }
       });
@@ -153,7 +154,7 @@ export default async function handler(req: any, res: any) {
       const prompt = `Based on this job description: ${jobDescription} And this candidate's resume: ${resumeText} Generate a 60-day strategic roadmap to land this job or a similar role. Include daily tasks and priorities.`;
 
       const response = await ai.models.generateContent({
-        model: 'gemini-3-flash-preview',
+        model,
         contents: prompt,
         config: { responseMimeType: 'application/json', responseSchema: STRATEGY_SCHEMA as any }
       });
@@ -164,6 +165,8 @@ export default async function handler(req: any, res: any) {
     return res.status(400).send('Unknown action');
   } catch (err: any) {
     console.error('Gemini API error', err);
-    return res.status(500).json({ error: String(err?.message || err) });
+    const message = String(err?.message || err);
+    const status = message.includes('PERMISSION_DENIED') ? 403 : 500;
+    return res.status(status).json({ error: message });
   }
 }

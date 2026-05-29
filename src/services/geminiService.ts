@@ -10,7 +10,20 @@ async function post(action: string, payload: any) {
 
   if (!res.ok) {
     const text = await res.text();
-    throw new Error(`API error: ${res.status} ${text}`);
+    let message = text;
+
+    try {
+      const parsed = JSON.parse(text);
+      message = parsed.error || parsed.message || text;
+    } catch {
+      // Keep the raw response text when the server did not return JSON.
+    }
+
+    if (message.includes('PERMISSION_DENIED') || message.includes('denied access')) {
+      throw new Error('Gemini API access denied. Check the GEMINI_API_KEY, API project permissions, and GEMINI_MODEL in Vercel.');
+    }
+
+    throw new Error(`API error: ${res.status} ${message}`);
   }
 
   return res.json();
