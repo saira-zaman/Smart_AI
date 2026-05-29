@@ -15,6 +15,8 @@ View your app in AI Studio: https://ai.studio/apps/d1b9489b-6d8f-4e26-93e4-c3cb9
 
 1. Install dependencies:
    `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
+2. Set the `GEMINI_API_KEY` in `.env` to your Gemini API key.
 3. Run the app:
    `npm run dev`
+
+`npm run dev` starts both the Vite frontend on port 3000 and the local mock API on port 4000. If you only start Vite, API actions such as "Extract job match score" will fail locally because `/api/gemini` has nothing to proxy to.
