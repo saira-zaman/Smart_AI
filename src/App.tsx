@@ -28,6 +28,7 @@ import {
   Map,
   Settings,
   LogOut,
+  LogIn,
   Sparkles,
   Loader2,
   Menu,
@@ -248,7 +249,7 @@ export default function SmartHireApp() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [userName, setUserName] = useState('');
-  const [loginInput, setLoginInput] = useState({ name: '', email: 'yourid@gmail.com' });
+  const [loginInput, setLoginInput] = useState({ name: '', email: '' });
 
   // Toast / notification
   const [toast, setToast] = useState<{ message: string; type?: 'info' | 'error' } | null>(null);
@@ -352,8 +353,9 @@ export default function SmartHireApp() {
             ) : (
               <button 
                 onClick={() => setShowLoginModal(true)}
-                className="text-xs font-bold text-brand hover:text-brand/80 transition-colors uppercase tracking-tight"
+                className="w-full inline-flex items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-3 py-2.5 text-[11px] font-black text-white hover:bg-white/10 hover:border-white/20 transition-all uppercase tracking-widest"
               >
+                <LogIn className="w-3.5 h-3.5 text-indigo-300" />
                 Sign In to Sync
               </button>
             )}
@@ -1158,10 +1160,12 @@ export default function SmartHireApp() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 bg-slate-950/40 backdrop-blur-sm z-200 flex items-center justify-center p-6"
+            onClick={() => setShowLoginModal(false)}
           >
             <motion.div 
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
+              onClick={(e) => e.stopPropagation()}
               className="bg-white max-w-sm w-full rounded-3xl shadow-2xl p-8 border border-slate-200"
             >
               <div className="text-center mb-8">
@@ -1198,15 +1202,17 @@ export default function SmartHireApp() {
                 <button 
                   type="submit"
                   disabled={isLoading}
-                  className="w-full py-4 bg-brand text-white rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-brand/90 transition-all shadow-lg"
+                  className="w-full min-h-14 py-4 bg-indigo-600 text-white rounded-xl font-black flex items-center justify-center gap-2 hover:bg-indigo-700 disabled:cursor-wait disabled:bg-indigo-400 transition-all shadow-[0_18px_34px_-18px_rgba(79,70,229,0.75)] uppercase tracking-widest text-xs"
                 >
-                  {isLoading ? "AUTHENTICATING..." : "SIGN IN NOW"}
+                  {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <LogIn className="w-4 h-4" />}
+                  <span>{isLoading ? "AUTHENTICATING..." : "SIGN IN NOW"}</span>
                 </button>
               </form>
               
               <button 
+                type="button"
                 onClick={() => setShowLoginModal(false)}
-                className="w-full mt-4 text-[11px] font-bold text-slate-400 hover:text-slate-600 transition-colors uppercase tracking-widest"
+                className="w-full mt-4 rounded-xl py-3 text-[11px] font-black text-slate-400 hover:text-slate-700 hover:bg-slate-50 transition-colors uppercase tracking-widest"
               >
                 Skip for now
               </button>
