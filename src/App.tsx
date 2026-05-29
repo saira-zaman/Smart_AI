@@ -711,7 +711,6 @@ export default function SmartHireApp() {
                   <div className="space-y-6">
                     <Card>
                       <div className="flex items-center gap-6">
-                        <div className="w-16 h-16 bg-linear-to-tr from-brand to-indigo-400 rounded-[20px] flex items-center justify-center text-white font-black text-lg shadow-lg shadow-brand/20">SA</div>
                         <div className="flex-1">
                           <div className="text-sm font-bold text-slate-700">{userName || 'Your Name'}</div>
                           <div className="text-xs text-slate-400">{loginInput.email}</div>
@@ -733,13 +732,16 @@ export default function SmartHireApp() {
                               aria-pressed={settings[item.key]}
                               onClick={() => setSettings(s => ({ ...s, [item.key]: !s[item.key] }))}
                               className={cn(
-                                "w-16 h-9 rounded-full relative p-1 cursor-pointer transition-all border",
-                                settings[item.key] ? "bg-brand border-brand/20 shadow-[0_10px_26px_rgba(79,70,229,0.18)]" : "bg-slate-200 border-slate-300"
+                                "w-16 h-9 rounded-full relative p-1 cursor-pointer transition-all duration-200 border shrink-0",
+                                settings[item.key]
+                                  ? "bg-blue-600 border-blue-600 shadow-[0_10px_26px_rgba(37,99,235,0.24)]"
+                                  : "bg-slate-200 border-slate-300"
                               )}
                             >
                               <motion.div 
-                                animate={{ x: settings[item.key] ? 32 : 0 }}
-                                className="w-7 h-7 bg-white rounded-full shadow-sm flex items-center justify-center text-[10px] font-black"
+                                animate={{ x: settings[item.key] ? 28 : 0 }}
+                                transition={{ type: 'spring', stiffness: 420, damping: 28 }}
+                                className="w-7 h-7 rounded-full bg-white shadow-sm flex items-center justify-center text-[10px] font-black"
                               />
                             </button>
                           </div>
