@@ -17,7 +17,21 @@ const ANALYSIS_SCHEMA = {
     },
     rejectionIntelligence: { type: Type.ARRAY, items: { type: Type.STRING } },
     selectionProbability: { type: Type.NUMBER },
-    missingSkills: { type: Type.ARRAY }
+    missingSkills: {
+      type: Type.ARRAY,
+      items: {
+        type: Type.OBJECT,
+        properties: {
+          skill: { type: Type.STRING },
+          daysToLearn: { type: Type.NUMBER },
+          roadmap: {
+            type: Type.ARRAY,
+            items: { type: Type.STRING },
+          },
+        },
+        required: ["skill", "daysToLearn", "roadmap"],
+      },
+    },
   },
   required: ["skills", "rejectionIntelligence", "selectionProbability", "missingSkills"],
 };
@@ -54,8 +68,20 @@ const EVALUATION_SCHEMA = {
 const STRATEGY_SCHEMA = {
   type: Type.OBJECT,
   properties: {
-    plan: { type: Type.ARRAY }
-  }
+    plan: {
+      type: Type.ARRAY,
+      items: {
+        type: Type.OBJECT,
+        properties: {
+          day: { type: Type.NUMBER },
+          priority: { type: Type.STRING, enum: ["High", "Medium", "Low"] },
+          task: { type: Type.STRING },
+        },
+        required: ["day", "priority", "task"],
+      },
+    },
+  },
+  required: ["plan"],
 };
 
 export default async function handler(req: any, res: any) {
