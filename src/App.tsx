@@ -14,30 +14,25 @@ import {
   FileText, 
   TrendingUp, 
   AlertCircle, 
-  CheckCircle2, 
-  Clock, 
-  Brain, 
   MessageSquare,
   ArrowRight,
-  ShieldCheck,
-  Target,
   Zap,
-  LayoutDashboard,
-  Radar,
-  Video,
   Map,
-  Settings,
-  LogOut,
-  LogIn,
   Sparkles,
   Loader2,
   Menu,
-  X
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import ReactMarkdown from 'react-markdown';
 import { analyzeResume, fixAndApply, getCareerStrategy, getInterviewQuestion, evaluateAnswer } from './services/geminiService';
 import { cn } from './lib/utils';
+import { FloatingLoader } from './components/feedback/FloatingLoader';
+import { Toast } from './components/feedback/Toast';
+import { Sidebar } from './components/layout/Sidebar';
+import { ApplicationModal } from './components/modals/ApplicationModal';
+import { LoginModal } from './components/modals/LoginModal';
+import { Card } from './components/ui/Card';
+import type { AppStep } from './types';
 
 type SettingsKey = 'ghostingProtection' | 'privacyMode' | 'autoOutreach';
 
@@ -47,42 +42,13 @@ const settingsOptions: Array<{ key: SettingsKey; title: string; desc: string }> 
   { key: 'autoOutreach', title: 'Direct Recruiter Messages', desc: 'Allow AI to ping recruiters on LinkedIn automatically.' }
 ];
 
-// --- Components ---
-
-const Card = ({ children, title, className, headerAction }: { children: React.ReactNode, title?: string, className?: string, headerAction?: React.ReactNode }) => (
-  <div className={cn("rounded-[28px] border border-white/70 bg-white/85 backdrop-blur-xl p-6 shadow-[0_20px_60px_-28px_rgba(15,23,42,0.35)] ring-1 ring-slate-200/50", className)}>
-    {title && (
-      <div className="flex items-center justify-between mb-6">
-        <h3 className="text-[11px] font-extrabold text-slate-500 uppercase tracking-[0.24em]">{title}</h3>
-        {headerAction}
-      </div>
-    )}
-    {children}
-  </div>
-);
-
-  const buttonBase = "inline-flex items-center justify-center gap-2 rounded-full font-semibold transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-brand/25 focus:ring-offset-2 focus:ring-offset-white active:scale-[0.99]";
   const buttonPrimary = "inline-flex items-center justify-center gap-2 rounded-full font-semibold transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-brand/25 focus:ring-offset-2 focus:ring-offset-white active:scale-[0.99] bg-brand text-white shadow-[0_18px_40px_-18px_rgba(79,70,229,0.6)] hover:-translate-y-0.5 hover:bg-indigo-600";
   const buttonSecondary = "inline-flex items-center justify-center gap-2 rounded-full font-semibold transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-brand/25 focus:ring-offset-2 focus:ring-offset-white active:scale-[0.99] border border-slate-200 bg-white text-slate-700 shadow-sm hover:-translate-y-0.5 hover:border-slate-300 hover:text-slate-900 hover:bg-slate-50";
   const buttonPill = "inline-flex items-center justify-center gap-2 rounded-full font-semibold transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-brand/25 focus:ring-offset-2 focus:ring-offset-white active:scale-[0.99] border border-white/10 bg-white/5 text-slate-200 hover:bg-white/10 hover:text-white";
   const buttonDanger = "inline-flex items-center justify-center gap-2 rounded-full font-semibold transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-brand/25 focus:ring-offset-2 focus:ring-offset-white active:scale-[0.99] bg-gradient-to-r from-red-500 to-rose-400 text-white shadow-[0_18px_40px_-22px_rgba(244,63,94,0.55)] hover:-translate-y-0.5 hover:from-red-600 hover:to-rose-500";
 
-const NavItem = ({ icon: Icon, label, active = false, onClick, loading = false }: { icon: any, label: string, active?: boolean, onClick?: () => void, loading?: boolean }) => (
-  <div 
-    onClick={!loading ? onClick : undefined}
-    className={cn(
-      "flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-semibold transition-all duration-200 border",
-      active ? "bg-white/10 text-white border-white/10 shadow-lg shadow-black/10" : "text-slate-400 border-transparent hover:text-white hover:bg-white/5 hover:border-white/10",
-      loading ? "opacity-50 cursor-wait" : "cursor-pointer"
-    )}
-  >
-    {loading ? <Loader2 className="w-4 h-4 animate-spin text-brand" /> : <Icon className="w-4 h-4" />}
-    {label}
-  </div>
-);
-
 export default function SmartHireApp() {
-  const [step, setStep] = useState<'upload' | 'analysis' | 'strategy' | 'interview' | 'radar' | 'settings'>('upload');
+  const [step, setStep] = useState<AppStep>('upload');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [resumeText, setResumeText] = useState('');
   const [jobDesc, setJobDesc] = useState('');
@@ -296,72 +262,22 @@ export default function SmartHireApp() {
         />
       )}
 
-      {/* Sidebar */}
-      <aside className={cn(
-        "w-[280px] bg-slate-950/95 backdrop-blur-xl flex flex-col p-6 shrink-0 z-50 fixed inset-y-0 left-0 transform transition-transform duration-300 ease-in-out md:relative md:translate-x-0 md:m-4 md:rounded-[28px] md:shadow-2xl md:shadow-slate-950/25 md:border md:border-white/10",
-        isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"
-      )}>
-        <button 
-          className="md:hidden absolute top-6 right-6 text-slate-400 hover:text-white"
-          onClick={() => setIsMobileMenuOpen(false)}
-        >
-          <X className="w-5 h-5" />
-        </button>
-
-        <div className="flex items-center gap-3 mb-10 px-2 text-slate-50 cursor-pointer" onClick={() => { setStep('upload'); setIsMobileMenuOpen(false); }}>
-          <div className="w-9 h-9 bg-linear-to-br from-brand to-indigo-400 rounded-2xl flex items-center justify-center shadow-lg shadow-brand/20">
-            <Zap className="w-5 h-5 fill-current" />
-          </div>
-          <span className="font-extrabold text-lg tracking-tight uppercase">SmartHire AI<span className="text-brand">++</span></span>
-        </div>
-
-        <nav className="flex-1 space-y-2">
-          <NavItem icon={LayoutDashboard} label="Dashboard" active={step === 'analysis'} onClick={() => analysis ? setStep('analysis') : setStep('upload')} />
-          <NavItem icon={Radar} label="Skill Radar" active={step === 'radar'} onClick={() => analysis ? setStep('radar') : showToast("Please upload and analyze a resume first.", 'error')} />
-          <NavItem 
-            icon={Video} 
-            label="Interview Sim" 
-            active={step === 'interview'} 
-            loading={isLoading && step === 'interview'}
-            onClick={() => analysis ? startInterview() : showToast("Please analyze a resume first.", 'error')}
-          />
-          <NavItem 
-            icon={Map} 
-            label="Career Strategy" 
-            active={step === 'strategy'} 
-            loading={isLoading && step === 'strategy'}
-            onClick={() => {
-              if (strategy) setStep('strategy');
-              else if (analysis) {
-                setStep('strategy'); // Set step early so loader shows in right place
-                generateStrategy();
-              }
-              else showToast("Please analyze a resume first.", 'error');
-            }} 
-          />
-          <NavItem icon={Settings} label="Settings" active={step === 'settings'} onClick={() => setStep('settings')} />
-        </nav>
-
-        <div className="mt-auto pt-6 border-t border-white/10">
-          <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Logged In As</div>
-          <div className="flex items-center justify-between">
-            {isLoggedIn ? (
-              <>
-                <div className="text-sm font-semibold text-white">{userName}</div>
-                <LogOut className="w-4 h-4 text-slate-400 cursor-pointer hover:text-white" onClick={() => setIsLoggedIn(false)} />
-              </>
-            ) : (
-              <button 
-                onClick={() => setShowLoginModal(true)}
-                className="w-full inline-flex items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-3 py-2.5 text-[11px] font-black text-white hover:bg-white/10 hover:border-white/20 transition-all uppercase tracking-widest"
-              >
-                <LogIn className="w-3.5 h-3.5 text-indigo-300" />
-                Sign In to Sync
-              </button>
-            )}
-          </div>
-        </div>
-      </aside>
+      <Sidebar
+        step={step}
+        analysis={analysis}
+        strategy={strategy}
+        isLoading={isLoading}
+        isLoggedIn={isLoggedIn}
+        isMobileMenuOpen={isMobileMenuOpen}
+        userName={userName}
+        onCloseMobileMenu={() => setIsMobileMenuOpen(false)}
+        onOpenLogin={() => setShowLoginModal(true)}
+        onLogout={() => setIsLoggedIn(false)}
+        onSetStep={setStep}
+        onStartInterview={() => startInterview()}
+        onGenerateStrategy={generateStrategy}
+        onShowToast={showToast}
+      />
 
       {/* Main Content Area */}
       <main className="flex-1 flex flex-col overflow-hidden relative h-full">
@@ -394,22 +310,7 @@ export default function SmartHireApp() {
            </div>
         )}
         <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-8">
-          <AnimatePresence>
-            {toast && (
-              <motion.div
-                key="toast"
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                className={cn(
-                  'fixed left-1/2 -translate-x-1/2 top-6 z-50 px-4 py-2 rounded-full text-sm font-bold shadow-lg',
-                  toast.type === 'error' ? 'bg-red-600 text-white' : 'bg-slate-800 text-white'
-                )}
-              >
-                {toast.message}
-              </motion.div>
-            )}
-          </AnimatePresence>
+          <Toast toast={toast} />
           <AnimatePresence mode="wait">
             {step === 'upload' && (
               <motion.div 
@@ -1048,178 +949,23 @@ export default function SmartHireApp() {
       </div>
       </main>
 
-      {/* Floating Prompt Loader */}
-      {isLoading && (
-        <div className="fixed inset-0 bg-slate-950/20 backdrop-blur-sm z-100 flex items-center justify-center">
-          <div className="bg-white p-8 rounded-3xl shadow-2xl flex flex-col items-center gap-6 max-w-sm text-center border-t-4 border-brand">
-            <div className="relative flex items-center justify-center w-20 h-20">
-              <div className="absolute inset-0 w-full h-full border-4 border-slate-100 border-t-brand rounded-full animate-spin" />
-              <div className="w-10 h-10 bg-brand rounded-xl flex items-center justify-center z-10 shadow-inner">
-                <Zap className="w-6 h-6 fill-white text-white" />
-              </div>
-            </div>
-            <div>
-              <h4 className="font-extrabold text-slate-900 text-lg uppercase tracking-tight">{loadingText.title || 'Loading'}</h4>
-              <p className="text-slate-500 text-sm mt-1">{loadingText.desc || 'Please wait a moment...'}</p>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Application Simulation Modal */}
-      <AnimatePresence>
-        {isApplying && (
-          <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-slate-950/60 backdrop-blur-md z-110 flex items-center justify-center p-6"
-          >
-            <motion.div 
-              initial={{ scale: 0.9, y: 20 }}
-              animate={{ scale: 1, y: 0 }}
-              className="bg-white max-w-lg w-full rounded-3xl shadow-2xl overflow-hidden border border-slate-200"
-            >
-              {!hasApplied ? (
-                <div className="p-8">
-                  <div className="flex items-center gap-3 mb-6">
-                    <div className="w-12 h-12 bg-brand/10 rounded-2xl flex items-center justify-center">
-                      <Rocket className="text-brand w-6 h-6" />
-                    </div>
-                    <div>
-                      <h3 className="text-xl font-black text-slate-900 uppercase italic">Confirm Application</h3>
-                      <p className="text-xs text-slate-500">Target: High Probability Selection (89%)</p>
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-4 mb-8">
-                    <div className="flex items-center gap-3 p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                      <CheckCircle2 className="text-green-500 w-5 h-5" />
-                      <span className="text-sm font-semibold">AI-Optimized "Google XYZ" Resume attached</span>
-                    </div>
-                    <div className="flex items-center gap-3 p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                      <CheckCircle2 className="text-green-500 w-5 h-5" />
-                      <span className="text-sm font-semibold">Tailored Cover Letter Generated</span>
-                    </div>
-                    <div className="flex items-center gap-3 p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                      <Target className="text-brand w-5 h-5" />
-                      <span className="text-sm font-semibold font-mono">ATS Compatibility: 100%</span>
-                    </div>
-                  </div>
-
-                  <div className="flex gap-3">
-                    <button 
-                      onClick={() => setIsApplying(false)}
-                      className="flex-1 py-4 bg-slate-100 text-slate-600 rounded-2xl font-bold hover:bg-slate-200 transition-all"
-                    >
-                      Cancel
-                    </button>
-                    <button 
-                      onClick={() => {
-                        setIsLoading(true);
-                        setTimeout(() => {
-                          setIsLoading(false);
-                          setHasApplied(true);
-                        }, 2000);
-                      }}
-                      className="flex-1 py-4 bg-brand text-white rounded-2xl font-bold hover:bg-brand/90 transition-all shadow-lg"
-                    >
-                      Send Smart Application
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <div className="p-10 text-center">
-                  <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6 scale-110">
-                    <ShieldCheck className="text-green-600 w-10 h-10" />
-                  </div>
-                  <h3 className="text-2xl font-black text-slate-900 mb-2">APPLICATION SENT!</h3>
-                  <p className="text-slate-500 mb-8 max-w-[280px] mx-auto text-sm">Our AI has successfully integrated your profile into the recruiter's shortlisting queue.</p>
-                  
-                  <button 
-                    onClick={() => {
-                      setIsApplying(false);
-                      setHasApplied(false);
-                      setStep('strategy');
-                    }}
-                    className="w-full py-4 bg-slate-900 text-white rounded-2xl font-bold hover:bg-black transition-all flex items-center justify-center gap-2"
-                  >
-                    View Next Strategic Steps <ArrowRight className="w-4 h-4" />
-                  </button>
-                </div>
-              )}
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-      {/* Login Modal */}
-      <AnimatePresence>
-        {showLoginModal && (
-          <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-slate-950/40 backdrop-blur-sm z-200 flex items-center justify-center p-6"
-            onClick={() => setShowLoginModal(false)}
-          >
-            <motion.div 
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              onClick={(e) => e.stopPropagation()}
-              className="bg-white max-w-sm w-full rounded-3xl shadow-2xl p-8 border border-slate-200"
-            >
-              <div className="text-center mb-8">
-                <div className="w-16 h-16 bg-brand/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                  <ShieldCheck className="text-brand w-8 h-8" />
-                </div>
-                <h3 className="text-2xl font-black text-slate-900 tracking-tight italic uppercase">Candidate_Portal</h3>
-                <p className="text-sm text-slate-500 mt-2">Sign in to save your 60-day strategy.</p>
-              </div>
-
-              <form onSubmit={handleLogin} className="space-y-4">
-                <div>
-                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 ml-1">Full Name</label>
-                  <input 
-                    type="text" 
-                    required
-                    className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 focus:ring-2 focus:ring-brand focus:bg-white outline-none text-sm text-slate-900 placeholder:text-slate-400 transition-all"
-                    placeholder="Enter your name"
-                    value={loginInput.name}
-                    onChange={(e) => setLoginInput({ ...loginInput, name: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 ml-1">Email Address</label>
-                  <input 
-                    type="email" 
-                    required
-                    className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 focus:ring-2 focus:ring-brand focus:bg-white outline-none text-sm text-slate-900 placeholder:text-slate-400 transition-all"
-                    placeholder="name@example.com"
-                    value={loginInput.email}
-                    onChange={(e) => setLoginInput({ ...loginInput, email: e.target.value })}
-                  />
-                </div>
-                <button 
-                  type="submit"
-                  disabled={isLoading}
-                  className="w-full min-h-14 py-4 bg-indigo-600 text-white rounded-xl font-black flex items-center justify-center gap-2 hover:bg-indigo-700 disabled:cursor-wait disabled:bg-indigo-400 transition-all shadow-[0_18px_34px_-18px_rgba(79,70,229,0.75)] uppercase tracking-widest text-xs"
-                >
-                  {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <LogIn className="w-4 h-4" />}
-                  <span>{isLoading ? "AUTHENTICATING..." : "SIGN IN NOW"}</span>
-                </button>
-              </form>
-              
-              <button 
-                type="button"
-                onClick={() => setShowLoginModal(false)}
-                className="w-full mt-4 rounded-xl py-3 text-[11px] font-black text-slate-400 hover:text-slate-700 hover:bg-slate-50 transition-colors uppercase tracking-widest"
-              >
-                Skip for now
-              </button>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <FloatingLoader isLoading={isLoading} loadingText={loadingText} />
+      <ApplicationModal
+        isOpen={isApplying}
+        hasApplied={hasApplied}
+        onClose={() => setIsApplying(false)}
+        onSetApplied={setHasApplied}
+        onSetLoading={setIsLoading}
+        onSetStep={setStep}
+      />
+      <LoginModal
+        isOpen={showLoginModal}
+        isLoading={isLoading}
+        loginInput={loginInput}
+        onChange={setLoginInput}
+        onClose={() => setShowLoginModal(false)}
+        onSubmit={handleLogin}
+      />
     </div>
   );
 }
